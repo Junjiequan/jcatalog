@@ -14,7 +14,7 @@ import { AttachmentsTab } from "./AttachmentsTab";
 import { Menu, MenuItem, MenuSep, Modal, Tip } from "@/components/ui/Overlay";
 import { Badge, CopyButton, EmptyState, ErrorState, Skeleton, KeywordChips, BackButton, Breadcrumb } from "@/components/ui/Primitives";
 import { TagInput } from "@/components/ui/TagInput";
-import { CURRENT_USER } from "@/data/db";
+import { currentUser } from "@/lib/session";
 import { api } from "@/api";
 import { bus } from "@/lib/bus";
 import { useResource } from "@/api/hooks";
@@ -392,9 +392,9 @@ export default function DatasetDetailPage() {
   useEffect(() => {
     if (d) {
       pushRecent({ pid: d.pid, name: d.datasetName });
-      document.title = `${d.datasetName} · metadatacatalogue`;
+      document.title = `${d.datasetName} · Metadata Catalog`;
     }
-    return () => void (document.title = "metadatacatalogue · Research data catalog");
+    return () => void (document.title = "Metadata Catalog");
   }, [d?.pid, d?.datasetName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

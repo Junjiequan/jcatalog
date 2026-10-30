@@ -44,6 +44,7 @@ export const scicatApi: CatalogApi = {
     requestDownload: todo("POST /jobs"),
   },
   proposals: { list: todo("GET /proposals"), get: todo("GET /proposals/{id}") },
+  auth: { signIn: todo("POST /auth/login"), signOut: async () => {} },
   attachments: { list: todo("GET /datasets/{pid}/attachments"), add: todo("POST /datasets/{pid}/attachments"), update: todo("PATCH /datasets/{pid}/attachments/{id}"), remove: todo("DELETE /datasets/{pid}/attachments/{id}"), picture: todo("GET /datasets/{pid}/attachments/{id}"), setThumbnail: todo("PATCH /datasets/{pid}") },
   samples: { list: todo("GET /samples"), get: todo("GET /samples/{id} + GET /datasets?filter=sampleId") },
   instruments: { list: todo("GET /instruments") },

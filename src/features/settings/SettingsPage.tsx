@@ -6,7 +6,7 @@ import { Tip } from "@/components/ui/Overlay";
 import { QueryPreview } from "@/features/datasets/QueryPreview";
 import { Button } from "@/components/ui/Button";
 import { Avatar, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
-import { CURRENT_USER } from "@/data/db";
+import { currentUser } from "@/lib/session";
 import { confirm } from "@/store/confirm";
 import { toast } from "@/store/toasts";
 import { useUI, type Density, type ListView, type Theme, type View } from "@/store/ui";
@@ -136,7 +136,7 @@ export default function SettingsPage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-6 animate-fade-in sm:px-8 sm:py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted">Make metadatacatalogue work the way you do.</p>
+        <p className="mt-1 text-sm text-muted">Make Metadata Catalog work the way you do.</p>
       </div>
       <Segmented className="mb-5" value={tab} onChange={setTab} options={TABS} />
       <div className="max-w-3xl space-y-6">
@@ -144,17 +144,17 @@ export default function SettingsPage() {
           <>
         <section className="card">
           <div className="flex items-center gap-4 px-5 py-5">
-            <AccountAvatar name={CURRENT_USER.name} role={CURRENT_USER.role} size={52} />
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-base font-semibold">{CURRENT_USER.name}</span><RoleBadge role={CURRENT_USER.role} /></div><div className="text-[13px] text-muted">{CURRENT_USER.email}</div></div>
+            <AccountAvatar name={currentUser().name} role={currentUser().role} size={52} />
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-base font-semibold">{currentUser().name}</span><RoleBadge role={currentUser().role} /></div><div className="text-[13px] text-muted">{currentUser().email}</div></div>
           </div>
-          {CURRENT_USER.role === "admin" && <div className="border-t border-line bg-accent-soft/50 px-5 py-3 text-[13px] text-accent-deep"><ShieldCheck className="mr-1.5 inline h-4 w-4 align-[-3px]" />You are an administrator: you can see every dataset, create datasets, and manage the data of any group.</div>}
+          {currentUser().role === "admin" && <div className="border-t border-line bg-accent-soft/50 px-5 py-3 text-[13px] text-accent-deep"><ShieldCheck className="mr-1.5 inline h-4 w-4 align-[-3px]" />You are an administrator: you can see every dataset, create datasets, and manage the data of any group.</div>}
           {/* groups decide what a user can see; listed as chips so a long list still scans at a glance */}
           <div className="border-t border-line px-5 py-4">
             <div className="flex items-center justify-between gap-3">
-              <div><h2 className="text-sm font-semibold">Your groups <span className="tnum font-normal text-muted">· {CURRENT_USER.groups.length}</span></h2><p className="mt-0.5 text-[13px] text-muted">Datasets and proposals owned by any of these groups are visible to you.</p></div>
-              <CopyButton text={CURRENT_USER.groups.join(", ")} label="Copy all groups" />
+              <div><h2 className="text-sm font-semibold">Your groups <span className="tnum font-normal text-muted">· {currentUser().groups.length}</span></h2><p className="mt-0.5 text-[13px] text-muted">Datasets and proposals owned by any of these groups are visible to you.</p></div>
+              <CopyButton text={currentUser().groups.join(", ")} label="Copy all groups" />
             </div>
-            <GroupChips groups={CURRENT_USER.groups} />
+            <GroupChips groups={currentUser().groups} />
           </div>
         </section>
 

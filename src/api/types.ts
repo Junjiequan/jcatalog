@@ -1,7 +1,7 @@
-import type {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, Instrument, Job, MetaKeyInfo, Proposal, PublishedData, Sample, Attachment} from "@/types";
+import type {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, Instrument, Job, MetaKeyInfo, Proposal, PublishedData, Sample, Attachment, AuthResult, AuthUser, DemoAccount, SignUpInput} from "@/types";
 
 // The contract the UI programs against. Every screen talks to this and nothing else, so swapping the
-// adapter (mock today, SciCat tomorrow) touches no component. See ./mock and ./scicat.
+// adapter (mock today, SciCat tomorrow) touches no component. The mock is in /mock (delete that folder to remove all dummy data); the backend is ./scicat.
 
 export interface Page<T> {
   items: T[];
@@ -90,6 +90,16 @@ export interface CatalogApi {
     publish(pid: string): Promise<Dataset>;
     requestRetrieval(pid: string): Promise<Job>;
     requestDownload(pids: string[]): Promise<Job>;
+  };
+  auth: {
+    signIn(email: string, password: string): Promise<AuthResult>;
+    signOut(): Promise<void>;
+    // a backend that keeps the session itself (a mock) is told who was signed in before a reload
+    restore?(user: AuthUser): void;
+    // only a test backend has these
+    signUp?(input: SignUpInput): Promise<AuthResult>;
+    demoAccounts?(): DemoAccount[];
+    signInDemo?(email: string): Promise<AuthResult>;
   };
   attachments: {
     list(pid: string): Promise<Attachment[]>;

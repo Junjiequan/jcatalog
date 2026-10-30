@@ -1,13 +1,13 @@
 import clsx from "clsx";
 import { Microscope } from "lucide-react";
-import { INSTRUMENTS } from "@/data/db";
+import { api } from "@/api";
 import { TechBadge } from "@/components/ui/Primitives";
 import { MoreChip } from "@/components/ui/Overlay";
 
 // A record is measured on one or more instruments. The chip wears the ESS cyan with a solid icon tile, so the instrument reads as the record's identity;
 // techniques are a different thing and live in TechniqueChips, in their own colours and their own row or column.
 export function InstrumentChips({ ids, size = "md", max, nowrap, onPick }: { ids: string[]; size?: "sm" | "md"; max?: number; nowrap?: boolean; onPick?: (id: string) => void }) {
-  const all = ids.map((id) => INSTRUMENTS.find((x) => x.pid === id)).filter((x) => !!x);
+  const all = ids.map((id) => api.options.instruments().find((x) => x.pid === id)).filter((x) => !!x);
   if (!all.length) return null;
   const shown = max ? all.slice(0, max) : all;
   return (
@@ -37,7 +37,7 @@ export function InstrumentChips({ ids, size = "md", max, nowrap, onPick }: { ids
 }
 
 // The techniques of some instruments, without repeats (a proposal or published set has no technique of its own)
-export const techniquesOf = (ids: string[]) => [...new Set(ids.flatMap((id) => INSTRUMENTS.find((x) => x.pid === id)?.techniques ?? []))];
+export const techniquesOf = (ids: string[]) => [...new Set(ids.flatMap((id) => api.options.instruments().find((x) => x.pid === id)?.techniques ?? []))];
 
 export function TechniqueChips({ names, nowrap, onPick }: { names: string[]; nowrap?: boolean; onPick?: (name: string) => void }) {
   if (!names.length) return null;

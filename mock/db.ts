@@ -11,14 +11,13 @@ import type {
   MetaValue,
   Proposal,
   PublishedData,
-  Role,
   Sample,
   Storage,
   Technique,
-  ThumbStyle,
 } from "@/types";
+import type { SeedDataset, ThumbStyle } from "./types";
 import { textToDataUrl } from "@/lib/attachments";
-import { thumbUrl } from "./thumbnail";
+import { thumbUrl } from "./images/art";
 
 function mulberry32(a: number) {
   return () => {
@@ -42,10 +41,10 @@ const GB = 1024 ** 3;
 // what each technique's data looks like on screen
 export const THUMB_OF: Record<string, ThumbStyle> = { SANS: "sans", Diffraction: "powder", Engineering: "powder", Reflectometry: "reflect", "Single-crystal": "single", MX: "laue", Imaging: "radiograph", Spectroscopy: "sqw", Backscattering: "qens", Vibrational: "ins" };
 
-export const CURRENT_USER = {
+// who the seed treats as "mine" when it decides what is shared, which jobs exist and so on (the demo user of the login page)
+const SEED_USER = {
   name: "Dr. Ada Okafor",
   email: "ada.okafor@example.org",
-  role: "user" as Role,
   groups: ["bio-sax", "ada-lab"],
 };
 
@@ -63,6 +62,9 @@ const emailOf = (name: string) =>
 interface InstrumentSeed extends InstrumentMeta {
   id: string;
   name: string;
+  // how the instrument's generated art was drawn, when it has no drawing
+  style: ThumbStyle;
+  hue: number;
 }
 const INSTRUMENT_SEEDS: InstrumentSeed[] = [
   { id: "loki", name: "LoKI", title: "Broadband SANS", kind: "SANS instrument", location: "North sector · Hall D03", status: "online", techniques: ["SANS"], style: "rings", hue: 265, image: "/instruments/loki.png", contact: "Dr. Sofia Marin", description: "Broadband small-angle scattering for soft matter and biology, covering a wide q range in a single setting with a bent-tube detector bank." },
@@ -83,10 +85,13 @@ const INSTRUMENT_SEEDS: InstrumentSeed[] = [
   { id: "tbl", name: "TBL", title: "Test beamline", kind: "Test beamline", location: "North sector · Hall D03", status: "online", techniques: ["Imaging"], style: "micrograph", hue: 330, image: "/instruments/tbl.jpg", contact: "Dr. Amara Diallo", description: "The ESS Test Beamline: first neutrons for detectors, choppers, sample environment and simple imaging setups." },
 ];
 // SciCat's Instrument: pid, uniqueName, name, customMetadata (the flat copy is what the UI reads)
-// the drawings are public files: addressed from wherever the app is served
-const asset = (path?: string) => (path ? `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}` : undefined);
-export const INSTRUMENTS: Instrument[] = INSTRUMENT_SEEDS.map(({ id, name, ...rest }) => {
-  const meta = { ...rest, image: asset(rest.image) };
+// the instrument drawings sit beside the seed (mock/assets), addressed through the bundler so the base path is handled for us
+const DRAWINGS = import.meta.glob<string>("./assets/instruments/*.{png,jpg}", { eager: true, query: "?url", import: "default" });
+const drawing = (path?: string) => (path ? DRAWINGS[`./assets/instruments/${path.split("/").pop()}`] : undefined);
+// how each instrument's generated pictures are drawn; kept here, not on the instrument
+export const ART_OF: Record<string, { style: ThumbStyle; hue: number }> = Object.fromEntries(INSTRUMENT_SEEDS.map((i) => [i.id, { style: i.style, hue: i.hue }]));
+export const INSTRUMENTS: Instrument[] = INSTRUMENT_SEEDS.map(({ id, name, style: _style, hue: _hue, ...rest }) => {
+  const meta = { ...rest, image: drawing(rest.image) };
   return {
     ...meta,
     pid: id,
@@ -487,7 +492,7 @@ for (const p of PROPOSALS) {
       keywords: [tech.toLowerCase(), ...shuffle(SAMPLE_KEYWORDS[sample.sampleId] ?? []).slice(0, 2)],
       meta: genMeta(tech),
       thumbSeed: int(1, 99999),
-      thumbHue: inst.hue + int(-10, 10),
+      thumbHue: ART_OF[inst.pid].hue + int(-10, 10),
       acq: int(12, 420) * 60000,
     };
     if (!derived) raws.push(d);
@@ -506,7 +511,7 @@ const addDays = (iso: string, d: number) => new Date(Math.min(new Date(iso).getT
 // run numbers climb with time on each instrument, as they do at a facility
 const runOf = new Map<string, number>();
 const done = new Map<number, Dataset>();
-export const datasets: Dataset[] = drafts.map((d) => {
+export const datasets: SeedDataset[] = drafts.map((d) => {
   const { p, inst, sample, tech } = d;
   const src = d.srcTmp !== undefined ? done.get(d.srcTmp)! : undefined;
   const n = (runOf.get(inst.pid) ?? int(4000, 60000)) + (src ? 0 : int(1, 28));
@@ -516,12 +521,12 @@ export const datasets: Dataset[] = drafts.map((d) => {
   const creation = new Date(d.t).toISOString();
   const endTime = new Date(d.t - int(1, 9) * 60000).toISOString();
   const startTime = new Date(d.t - d.acq).toISOString();
-  const mine = CURRENT_USER.groups.includes(p.ownerGroup);
+  const mine = SEED_USER.groups.includes(p.ownerGroup);
   const sharedWith = !mine && p.proposalId === "20240933" && chance(0.55) ? ["ada-lab"] : mine && chance(0.15) ? ["kovacs-lab"] : [];
   const orcid = String(p.metadata.pi_orcid?.value ?? "");
   const age = (NOW - d.t) / DAY;
   const storage: Storage = age > 260 && chance(0.55) ? "archived" : "online";
-  const rec: Dataset = {
+  const rec: SeedDataset = {
     pid: pidOf.get(d.tmpId)!,
     datasetName,
     description: src
@@ -574,7 +579,7 @@ export const datasets: Dataset[] = drafts.map((d) => {
     sampleId: sample.sampleId,
     sampleName: sample.sampleName,
     thumbSeed: d.thumbSeed,
-    thumbStyle: (THUMB_OF[tech] ?? inst.style) as ThumbStyle,
+    thumbStyle: (THUMB_OF[tech] ?? ART_OF[inst.pid].style) as ThumbStyle,
     thumbHue: d.thumbHue,
     history: [],
   };
@@ -644,7 +649,7 @@ export const published: PublishedData[] = PUBLISHED_IDS.flatMap((pid) => {
 });
 
 let jobSeq = 1040;
-const mineSets = datasets.filter((d) => CURRENT_USER.groups.includes(d.ownerGroup));
+const mineSets = datasets.filter((d) => SEED_USER.groups.includes(d.ownerGroup));
 const JOB_MESSAGES: Record<JobKind, Partial<Record<JobStatus, string[]>>> = {
   download: { finishedSuccessful: ["Archive ready · expired after 7 days", "Archive ready"], finishedUnsuccessful: ["Packaging failed — disk quota exceeded"], finishedWithDatasetErrors: ["Checksum mismatch on 2 files; the rest were packaged"], cancelled: ["Cancelled by user"] },
   retrieve: { finishedSuccessful: ["Restored to online storage"], finishedUnsuccessful: ["Tape library timeout — safe to retry", "Tape drive busy, request expired"], finishedWithDatasetErrors: ["1 dataset missing on tape; others restored"], cancelled: ["Cancelled before the tape was mounted"] },
@@ -661,9 +666,9 @@ const seededJob = (type: JobKind, statusCode: JobStatus, ageDays: number, messag
     type,
     statusCode,
     statusMessage: message ?? pick(JOB_MESSAGES[type][statusCode] ?? ["—"]),
-    ownerUser: CURRENT_USER.email,
-    ownerGroup: CURRENT_USER.groups[0],
-    contactEmail: CURRENT_USER.email,
+    ownerUser: SEED_USER.email,
+    ownerGroup: SEED_USER.groups[0],
+    contactEmail: SEED_USER.email,
     jobParams: { datasetList: sets.map((s) => ({ pid: s.pid, files: [] })) },
     configVersion: "v1.0.0",
     jobResultObject: {},
@@ -775,9 +780,9 @@ const IMAGE_CAPTION: Record<string, string> = {
     const imageId = `att-${++n}`;
     let picture: string | undefined;
     attachments.push(
-      Object.defineProperty({ ...base, id: imageId, caption: IMAGE_CAPTION[d.thumbStyle] ?? "Preview image", fileName: `${d.datasetName}_${d.thumbStyle}.jpg`, mimeType: "image/jpeg", size: int(55000, 130000) } as Attachment, "dataUrl", {
+      Object.defineProperty({ ...base, id: imageId, caption: IMAGE_CAPTION[d.thumbStyle!] ?? "Preview image", fileName: `${d.datasetName}_${d.thumbStyle}.jpg`, mimeType: "image/jpeg", size: int(55000, 130000) } as Attachment, "dataUrl", {
         enumerable: true,
-        get: () => (picture ??= thumbUrl(d.thumbSeed, d.thumbStyle, d.thumbHue)),
+        get: () => (picture ??= thumbUrl(d.thumbSeed!, d.thumbStyle!, d.thumbHue!)),
       }),
     );
     d.thumbnailAttachmentId = imageId;

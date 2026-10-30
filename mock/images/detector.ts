@@ -1,4 +1,4 @@
-import type { ThumbStyle } from "@/types";
+import type { ThumbStyle } from "../types";
 
 // Thumbnails drawn from the physics each technique measures, the way a facility's reduction software shows them:
 // a SANS detector image in log counts with its beamstop, a refined powder pattern, a reflectivity curve, Laue spots, an S(Q,E) map…

@@ -15,7 +15,7 @@ import { CreateDatasetDialog } from "@/features/datasets/CreateDatasetDialog";
 import { useUI, type Theme } from "@/store/ui";
 import { useSelection } from "@/store/selection";
 import { useHotkeys, useMediaQuery } from "@/hooks/hooks";
-import { CURRENT_USER } from "@/data/db";
+import { currentUser } from "@/lib/session";
 import { bus } from "@/lib/bus";
 import { toast } from "@/store/toasts";
 import { datasetLink } from "@/lib/query";
@@ -46,8 +46,8 @@ function Sidebar() {
       <Link to="/datasets" className="flex h-14 shrink-0 items-center gap-2.5 whitespace-nowrap pl-5">
         <Logo className="h-8 w-8 shrink-0 drop-shadow-[0_3px_6px_rgb(0_157_224/0.35)]" />
         <span className={clsx("flex flex-col leading-[1.18]", fade)}>
-          <span className="whitespace-nowrap bg-gradient-to-r from-brand to-accent-deep bg-clip-text pb-px text-[17px] font-extrabold tracking-[-0.04em] text-transparent">metadata</span>
-          <span className="whitespace-nowrap pb-0.5 text-[17px] font-semibold tracking-[-0.04em] text-fg">catalogue</span>
+          <span className="whitespace-nowrap bg-gradient-to-r from-brand to-accent-deep bg-clip-text pb-px text-[17px] font-extrabold tracking-[-0.04em] text-transparent">Metadata</span>
+          <span className="whitespace-nowrap pb-0.5 text-[17px] font-semibold tracking-[-0.04em] text-fg">Catalog</span>
         </span>
       </Link>
 
@@ -164,10 +164,10 @@ function Topbar() {
           </Button>
         </Tip>
         <div className="hidden sm:block"><ThemeMenu /></div>
-        <Menu trigger={<button className="ml-1 shrink-0 rounded-full outline-offset-2" aria-label="Account"><AccountAvatar name={CURRENT_USER.name} role={CURRENT_USER.role} size={32} /></button>}>
+        <Menu trigger={<button className="ml-1 shrink-0 rounded-full outline-offset-2" aria-label="Account"><AccountAvatar name={currentUser().name} role={currentUser().role} size={32} /></button>}>
           <div className="px-2.5 py-2">
-            <div className="flex items-center gap-2"><span className="truncate text-sm font-medium">{CURRENT_USER.name}</span><RoleBadge role={CURRENT_USER.role} /></div>
-            <div className="text-xs text-muted">{CURRENT_USER.email}</div>
+            <div className="flex items-center gap-2"><span className="truncate text-sm font-medium">{currentUser().name}</span><RoleBadge role={currentUser().role} /></div>
+            <div className="text-xs text-muted">{currentUser().email}</div>
           </div>
           <MenuSep />
           <UserMenuLinks />

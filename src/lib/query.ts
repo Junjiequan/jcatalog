@@ -1,9 +1,9 @@
 import { FILTER_GROUPS, type FilterGroup } from "@/types";
-import { CURRENT_USER } from "@/data/db";
+import { currentUser } from "@/lib/session";
 import type { DatasetQuery, MetaCond, Scope, SortKey, Storage } from "@/types";
 
 // an administrator reaches every dataset, so that is where the list starts; everyone else starts with their own
-export const defaultScope = (): Scope => (CURRENT_USER.role === "admin" ? "all" : "mine");
+export const defaultScope = (): Scope => (currentUser().role === "admin" ? "all" : "mine");
 
 export const PAGE_SIZES = [10, 25, 50, 100];
 export const DEFAULT_PAGE_SIZE = 10;

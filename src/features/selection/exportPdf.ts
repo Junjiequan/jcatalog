@@ -76,7 +76,7 @@ export async function selectionHtml(list: SelItem[]) {
   const sections = await Promise.all(
     byKind(list).map(async ([k, l]) => `<section><h2>${esc(KIND_LABEL[k][1][0].toUpperCase() + KIND_LABEL[k][1].slice(1))} · ${l.length}</h2>${(await Promise.all(l.map(block))).join("")}</section>`),
   );
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Selection · metadatacatalogue</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Selection · Metadata Catalog</title><style>
     body{font:12.5px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a;margin:32px;max-width:860px}
     h1{font-size:20px;margin:0 0 2px}.sub{color:#64748b;margin:0 0 24px}
     h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#475569;border-bottom:2px solid #cbd5e1;padding-bottom:4px;margin:28px 0 12px}

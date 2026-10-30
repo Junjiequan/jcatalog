@@ -1,18 +1,17 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router";
 import { AlertCircle, Eye, EyeOff, FlaskConical, LogIn, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Thumb";
 import { Avatar, Field, RoleBadge, Segmented } from "@/components/ui/Primitives";
 import { Button } from "@/components/ui/Button";
-import { DEMO_PASSWORD, SEED_ACCOUNTS } from "@/data/accounts";
-import { detectorImageUrl } from "@/data/detectorImages";
+import { api } from "@/api";
 import { useAuth } from "@/store/auth";
 import type { Role } from "@/types";
 
 type Mode = "in" | "up";
 
 export default function LoginPage() {
-  const { session, signIn, signUp } = useAuth();
+  const { session, signIn, signUp, signInDemo } = useAuth();
   const loc = useLocation();
   const from = (loc.state as { from?: string } | null)?.from ?? "/datasets";
   const [mode, setMode] = useState<Mode>("in");
@@ -23,39 +22,44 @@ export default function LoginPage() {
   const [role, setRole] = useState<Role>("user");
   const [withDemoData, setWithDemoData] = useState(true);
   const [error, setError] = useState("");
-  // a picture of what the catalogue holds, drawn once
-  const hero = useMemo(() => detectorImageUrl(2024, "sans"), []);
+  // only a test backend offers sign-up and ready-made accounts
+  const demoAccounts = api.auth.demoAccounts?.() ?? [];
+  const canSignUp = !!api.auth.signUp;
 
   if (session) return <Navigate to={from} replace />;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    const r = mode === "in" ? signIn(email, password) : signUp({ name, email, password, role, withDemoData });
+    const r = mode === "in" ? await signIn(email, password) : await signUp({ name, email, password, role, withDemoData });
     if (!r.ok) setError(r.error);
   };
-  const demo = (e: string) => {
+  const demo = async (e: string) => {
     setError("");
-    signIn(e, DEMO_PASSWORD);
+    const r = await signInDemo(e);
+    if (!r.ok) setError(r.error);
   };
 
   return (
-    <div className="grid min-h-dvh bg-canvas lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid min-h-dvh grid-cols-[minmax(0,1fr)] bg-canvas lg:grid-cols-[1.05fr_1fr]">
       {/* the brand side: only where there is room for it */}
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#0a5fa8] via-[#0b7fc4] to-[#009de0] p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
           <Logo className="h-11 w-11 drop-shadow-[0_6px_14px_rgb(0_0_0/0.25)]" />
           <div className="flex flex-col leading-[1.18]">
-            <span className="text-[22px] font-extrabold tracking-[-0.04em]">metadata</span>
-            <span className="text-[22px] font-semibold tracking-[-0.04em] text-white/85">catalogue</span>
+            <span className="text-[22px] font-extrabold tracking-[-0.04em]">Metadata</span>
+            <span className="text-[22px] font-semibold tracking-[-0.04em] text-white/85">Catalog</span>
           </div>
         </div>
         <div className="max-w-md">
           <h1 className="text-4xl font-bold leading-[1.1] tracking-tight">Find, understand and share your neutron data.</h1>
           <p className="mt-4 text-[15px] leading-relaxed text-white/80">Datasets, proposals, samples and instruments in one place, with the detector images, scripts and notes that explain them.</p>
-          <img src={hero} alt="" draggable={false} className="mt-8 aspect-[8/5] w-full max-w-sm rotate-[-2deg] rounded-2xl border border-white/25 object-cover shadow-[0_24px_60px_-18px_rgb(0_0_0/0.55)]" />
+          <div aria-hidden className="relative mt-8 aspect-[8/5] w-full max-w-sm rotate-[-2deg] overflow-hidden rounded-2xl border border-white/25 bg-[#06223d] shadow-[0_24px_60px_-18px_rgb(0_0_0/0.55)]">
+            {[18, 34, 50, 66, 82].map((r) => <span key={r} className="absolute left-1/2 top-1/2 aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/40" style={{ width: `${r}%`, opacity: 1.1 - r / 90 }} />)}
+            <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200 shadow-[0_0_24px_8px_rgb(103_232_249/0.6)]" />
+          </div>
         </div>
-        <p className="text-xs text-white/60">European Spallation Source · demonstration catalogue</p>
+        <p className="text-xs text-white/60">European Spallation Source · demonstration catalog</p>
         <span className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
       </aside>
 
@@ -64,15 +68,15 @@ export default function LoginPage() {
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <Logo className="h-10 w-10" />
             <div className="flex flex-col leading-[1.18]">
-              <span className="bg-gradient-to-r from-brand to-accent-deep bg-clip-text text-lg font-extrabold tracking-[-0.04em] text-transparent">metadata</span>
-              <span className="text-lg font-semibold tracking-[-0.04em]">catalogue</span>
+              <span className="bg-gradient-to-r from-brand to-accent-deep bg-clip-text text-lg font-extrabold tracking-[-0.04em] text-transparent">Metadata</span>
+              <span className="text-lg font-semibold tracking-[-0.04em]">Catalog</span>
             </div>
           </div>
 
           <h2 className="text-2xl font-semibold tracking-tight">{mode === "in" ? "Sign in" : "Create a test account"}</h2>
-          <p className="mt-1.5 text-sm text-muted">{mode === "in" ? "Welcome back. Use your account, or one of the demo accounts below." : "For trying the catalogue. The account lives only in this browser."}</p>
+          <p className="mt-1.5 text-sm text-muted">{mode === "in" ? "Welcome back. Use your account, or one of the demo accounts below." : "For trying the catalog. The account lives only in this browser."}</p>
 
-          <Segmented className="mt-6" stretch value={mode} onChange={(v: Mode) => (setMode(v), setError(""))} options={[{ value: "in", label: "Sign in" }, { value: "up", label: "Create test account" }]} />
+          {canSignUp && <Segmented className="mt-6" stretch value={mode} onChange={(v: Mode) => (setMode(v), setError(""))} options={[{ value: "in", label: "Sign in" }, { value: "up", label: "Create test account" }]} />}
 
           <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
             {mode === "up" && <Field label="Name"><input className="field h-11" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Dr. Jane Doe" autoFocus /></Field>}
@@ -109,10 +113,10 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8">
+          {demoAccounts.length > 0 && <div className="mt-8">
             <div className="mb-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-subtle"><span className="h-px flex-1 bg-line" />Demo accounts<span className="h-px flex-1 bg-line" /></div>
             <ul className="space-y-2">
-              {SEED_ACCOUNTS.map((a) => (
+              {demoAccounts.map((a) => (
                 <li key={a.email}>
                   <button type="button" onClick={() => demo(a.email)} className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:border-accent hover:bg-accent-soft/40">
                     <Avatar name={a.name} size={36} />
@@ -125,7 +129,7 @@ export default function LoginPage() {
               ))}
             </ul>
             <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-subtle"><FlaskConical className="h-3.5 w-3.5" />Test environment · accounts are stored in this browser only</p>
-          </div>
+          </div>}
         </div>
       </main>
     </div>

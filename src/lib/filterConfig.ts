@@ -1,8 +1,10 @@
 import { parse } from "yaml";
+// the panel the app ships with: the same file a deployment can replace at runtime
+import bundledYaml from "../../config/filters.yaml?raw";
 
-// Which filters the Datasets side panel shows, in what order and how. Loaded from public/filters.yaml at
-// runtime, so a facility can change the panel without a rebuild. Anything wrong in the file falls back to the
-// built-in default and is reported in the console.
+// Reads and checks config/filters.yaml: which filters the Datasets side panel shows, in what order and how.
+// The file is fetched at runtime, so a facility can change the panel without a rebuild. Anything wrong in it falls back
+// to the bundled copy of the file and is reported in the console. Only functions and types live here; the settings are in config/.
 
 export type FilterField = "techniques" | "instruments" | "proposals" | "keywords" | "created" | "data" | "measurements";
 export type FilterWidget = "tiles" | "rows" | "chips" | "toggles" | "timeline" | "sliders";
@@ -34,22 +36,20 @@ const SPEC: Record<FilterField, { widgets: FilterWidget[]; label: string; open: 
   keywords: { widgets: ["chips", "rows"], label: "Keywords", open: false, limit: 8 },
 };
 
-export const DEFAULT_FILTER_CONFIG: FilterConfig = {
-  filters: (Object.keys(SPEC) as FilterField[]).map((field) => ({ field, widget: SPEC[field].widgets[0], label: SPEC[field].label, open: SPEC[field].open, limit: SPEC[field].limit })),
-};
-
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-export function parseFilterConfig(text: string): { config: FilterConfig; warnings: string[] } {
+type Parsed = { config: FilterConfig | null; warnings: string[] };
+
+function check(text: string): Parsed {
   const warnings: string[] = [];
   let doc: unknown;
   try {
     doc = parse(text);
   } catch (e) {
-    return { config: DEFAULT_FILTER_CONFIG, warnings: [`filters.yaml is not valid YAML (${(e as Error).message.split("\n")[0]}); using the default panel`] };
+    return { config: null, warnings: [`filters.yaml is not valid YAML (${(e as Error).message.split("\n")[0]}); using the default panel`] };
   }
   if (!isObj(doc) || !Array.isArray(doc.filters)) {
-    return { config: DEFAULT_FILTER_CONFIG, warnings: ['filters.yaml needs a top-level "filters:" list; using the default panel'] };
+    return { config: null, warnings: ['filters.yaml needs a top-level "filters:" list; using the default panel'] };
   }
   const seen = new Set<string>();
   const filters: FilterEntry[] = [];
@@ -83,15 +83,23 @@ export function parseFilterConfig(text: string): { config: FilterConfig; warning
   return { config: { filters }, warnings };
 }
 
+// the panel the app ships with
+export const defaultFilterConfig = (): FilterConfig => check(bundledYaml).config ?? { filters: [] };
+
+export function parseFilterConfig(text: string): { config: FilterConfig; warnings: string[] } {
+  const { config, warnings } = check(text);
+  return { config: config ?? defaultFilterConfig(), warnings };
+}
+
 export async function loadFilterConfig(): Promise<FilterConfig> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}filters.yaml`, { cache: "no-cache" });
     // a dev/SPA server answers a missing file with the app's own HTML
-    if (!res.ok || (res.headers.get("content-type") ?? "").includes("text/html")) return DEFAULT_FILTER_CONFIG;
+    if (!res.ok || (res.headers.get("content-type") ?? "").includes("text/html")) return defaultFilterConfig();
     const { config, warnings } = parseFilterConfig(await res.text());
     warnings.forEach((w) => console.warn(`[filters.yaml] ${w}`));
     return config;
   } catch {
-    return DEFAULT_FILTER_CONFIG;
+    return defaultFilterConfig();
   }
 }

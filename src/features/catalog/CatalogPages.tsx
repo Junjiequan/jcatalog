@@ -5,7 +5,6 @@ import { Archive, ArrowRight, BookOpen, Download, Eye, FlaskConical, Globe, List
 import { InstrumentThumb } from "@/components/Thumb";
 import { InstrumentChips, TechniqueChips, techniquesOf } from "@/components/InstrumentChips";
 import { ClipRow } from "@/components/ui/Overlay";
-import { INSTRUMENTS } from "@/data/db";
 import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorState, ListToolbar, NoMatches, Page, PageHeader, Pager, ProgressBar, STICKY_PAGER, CardCheck, CardGrid, Segmented, Skeleton, Table, TechBadge, ViewOptions, cardCls, ViewSwitch, useShownColumns, type Column, type TableSelection } from "@/components/ui/Primitives";
 import { useSelection, type SelItem } from "@/store/selection";
@@ -223,7 +222,7 @@ export function InstrumentsPage() {
 export function PublishedPage() {
   const { data, error, reload } = useResource(["published"], () => api.published.list());
   const [q, setQ] = useState("");
-  const list = useMemo(() => (data ?? []).filter((p) => matchesSearch(q, p.title, p.doi, p.metadata.creators.map((c) => c.name), p.abstract, p.metadata.publicationYear, p.instrumentIds.map((id) => INSTRUMENTS.find((x) => x.pid === id)?.name ?? id))), [data, q]);
+  const list = useMemo(() => (data ?? []).filter((p) => matchesSearch(q, p.title, p.doi, p.metadata.creators.map((c) => c.name), p.abstract, p.metadata.publicationYear, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))), [data, q]);
   const pg = usePaging(list, q);
   const [view, setView] = useListView("published", "cards");
   const show = useShownColumns("published");

@@ -1,7 +1,25 @@
-# docker compose up      then open http://localhost:8080
+# Local development with hot reload:  docker compose up      then open http://localhost:5173
+# Edit the source on your machine; the page reloads as you save. Nothing to build.
+#
+# Node is here because hot reload is Vite's dev server, which runs on Node (nginx only serves a finished build).
 services:
-  catalog:
-    image: ghcr.io/junjiequan/jcatalog:latest
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    # `install --no-save`, not `ci`: ci deletes node_modules, which is a volume mount point here. --no-save also leaves
+    # the lock file as it is. Quick when nothing changed.
+    command: sh -c "npm install --no-save --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     ports:
-      - "8080:80"
-    restart: unless-stopped
+      - "${APP_PORT:-5173}:5173"
+    environment:
+      # file events from a bind mount are unreliable on macOS and Windows, so the watcher polls
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      # your source, live
+      - .:/app
+      # the container's own Linux dependencies: the host's node_modules (macOS binaries) must not shadow them
+      - node_modules:/app/node_modules
+    init: true
+
+volumes:
+  node_modules:

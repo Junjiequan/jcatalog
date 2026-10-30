@@ -1,11 +1,13 @@
-import { CURRENT_USER, INSTRUMENTS, attachments, nextAttachmentId, PROPOSALS, SAMPLES, THUMB_OF, datasets, jobs, lifecycleFor, makeEvent, nextJobId, published, setStorage } from "@/data/db";
-import { canCreateDatasets, canManage, isAdmin } from "@/lib/permissions";
+import { ART_OF, INSTRUMENTS, attachments, nextAttachmentId, PROPOSALS, SAMPLES, THUMB_OF, datasets, jobs, lifecycleFor, makeEvent, nextJobId, published, setStorage } from "./db";
+import { canCreateDatasets, canManage, isAdmin, user } from "./session";
+import { mockAuth } from "./auth";
 import { emitChanged, emitJobDone } from "@/lib/bus";
 import { fmtDate } from "@/lib/format";
 import { toSI, unitInfo } from "@/lib/units";
 import { combine, matchValues } from "@/lib/query";
 import { makeThumbnail } from "@/lib/attachments";
 import type { CatalogApi, CreateInput } from "@/api/types";
+import type { SeedDataset } from "./types";
 import {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, FilterGroup, Instrument, Job, JobKind, MetaCond, MetaKeyInfo, Proposal, PublishedData, Sample, Scope, Storage, storageOf, techniqueNames} from "@/types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -22,12 +24,12 @@ const slowLag = (min: number, spread: number, signal?: AbortSignal) =>
     });
   });
 
-const isMine = (d: Dataset) => CURRENT_USER.groups.includes(d.ownerGroup);
+const isMine = (d: Dataset) => user.groups.includes(d.ownerGroup);
 const inScope = (d: Dataset, s: Scope) => {
   // an administrator can reach every dataset
   if (isAdmin() && s === "all") return true;
   const mine = isMine(d);
-  const shared = !mine && d.sharedWith.some((g) => CURRENT_USER.groups.includes(g));
+  const shared = !mine && d.sharedWith.some((g) => user.groups.includes(g));
   if (s === "mine") return mine;
   if (s === "shared") return shared;
   if (s === "public") return d.isPublished;
@@ -91,7 +93,7 @@ export function labelFor(field: FacetField, v: string): string {
 
 // The values a filter can offer. They come from small dictionaries, not from counting datasets,
 // so the filter appears at once and never waits on the catalog.
-const isMyProposal = (p: Proposal) => CURRENT_USER.groups.includes(p.ownerGroup);
+const isMyProposal = (p: Proposal) => user.groups.includes(p.ownerGroup);
 
 export function facetOptions(field: FacetField): FacetOption[] {
   const byLabel = (a: FacetOption, b: FacetOption) => a.label.localeCompare(b.label);
@@ -165,7 +167,7 @@ function newJob(kind: JobKind, sets: Dataset[], message?: string): Job {
   const at = new Date().toISOString();
   const job: Job = {
     id: nextJobId(), type: kind, statusCode: "jobSubmitted", statusMessage: message ?? "",
-    ownerUser: CURRENT_USER.email, ownerGroup: CURRENT_USER.groups[0], contactEmail: CURRENT_USER.email,
+    ownerUser: user.email, ownerGroup: user.groups[0], contactEmail: user.email,
     jobParams: { datasetList: sets.map((s) => ({ pid: s.pid, files: [] })) }, configVersion: "v1.0.0", jobResultObject: {},
     createdAt: at, updatedAt: at, progress: 0, datasetNames: sets.map((s) => s.datasetName), bytes: sets.reduce((a, s) => a + s.size, 0),
   };
@@ -183,8 +185,8 @@ function prng(seed: number) {
   };
 }
 
-function genFiles(d: Dataset): { files: FileEntry[]; total: number } {
-  const r = prng(d.thumbSeed);
+function genFiles(d: SeedDataset): { files: FileEntry[]; total: number } {
+  const r = prng(d.thumbSeed ?? 1);
   const t0 = new Date(d.creationTime).getTime();
   const tech = d.techniques[0]?.name;
   const avg = d.size / Math.max(1, d.numberOfFiles);
@@ -286,9 +288,9 @@ export const mockApi: CatalogApi = {
       if (!canManage(d.ownerGroup)) throw new Error("You don't have permission to change this dataset.");
       if (patch.keywords) trackKeywords(d.keywords, patch.keywords);
       Object.assign(d, patch);
-      d.history.push(makeEvent(new Date().toISOString(), "edited", CURRENT_USER.name, note));
+      d.history.push(makeEvent(new Date().toISOString(), "edited", user.name, note));
       d.updatedAt = new Date().toISOString();
-      d.updatedBy = CURRENT_USER.email;
+      d.updatedBy = user.email;
       emitChanged();
       return { ...d };
     },
@@ -314,12 +316,12 @@ export const mockApi: CatalogApi = {
       const now = new Date().toISOString();
       trackKeywords([], input.keywords);
       const tech = inst.techniques[0];
-      const d: Dataset = {
+      const d: SeedDataset = {
         pid: `MDC-${new Date().getFullYear() % 100}-${String(++pidSeq + 1000).padStart(5, "0")}`,
         datasetName: input.name, runNumber: input.runNumber ?? "", description: input.description, type: input.type,
-        ownerGroup: CURRENT_USER.groups[0], accessGroups: [prop.proposalId], instrumentGroup: inst.pid, isPublished: false,
-        owner: CURRENT_USER.name, ownerEmail: CURRENT_USER.email, contactEmail: CURRENT_USER.email, sharedWith: [],
-        sourceFolder: input.sourceFolder || `/data/${CURRENT_USER.groups[0]}/${prop.proposalId}/${input.name}`,
+        ownerGroup: user.groups[0], accessGroups: [prop.proposalId], instrumentGroup: inst.pid, isPublished: false,
+        owner: user.name, ownerEmail: user.email, contactEmail: user.email, sharedWith: [],
+        sourceFolder: input.sourceFolder || `/data/${user.groups[0]}/${prop.proposalId}/${input.name}`,
         size: input.bytes, packedSize: 0, numberOfFiles: input.fileCount, numberOfFilesArchived: 0,
         creationTime: now, startTime: now, endTime: now, creationLocation: `/Lund/ESS/${inst.name}`, dataFormat: "NeXus (HDF5)",
         keywords: input.keywords, license: "CC BY 4.0", classification: "IN=medium,AV=low,CO=low", version: "v4",
@@ -328,10 +330,10 @@ export const mockApi: CatalogApi = {
         principalInvestigators: [prop.pi], proposalIds: [prop.proposalId], sampleIds: sample ? [sample.sampleId] : [], instrumentIds: [inst.pid],
         inputDatasets: [], usedSoftware: [],
         scientificMetadata: Object.fromEntries(input.metadata.filter((m) => m.key.trim()).map((m) => [m.key.trim().replace(/\s+/g, "_"), { value: Number.isNaN(Number(m.value)) || m.value === "" ? m.value : Number(m.value), unit: m.unit || undefined, group: "Acquisition" }])),
-        createdBy: CURRENT_USER.email, updatedBy: CURRENT_USER.email, createdAt: now, updatedAt: now,
+        createdBy: user.email, updatedBy: user.email, createdAt: now, updatedAt: now,
         instrumentName: inst.name, proposalId: prop.proposalId, proposalTitle: prop.title, sampleId: sample?.sampleId ?? "", sampleName: sample?.sampleName ?? "—",
-        thumbSeed: Math.floor(Math.random() * 99999), thumbStyle: THUMB_OF[tech] ?? inst.style, thumbHue: inst.hue,
-        history: [makeEvent(now, "created", CURRENT_USER.name, "Dataset record created")],
+        thumbSeed: Math.floor(Math.random() * 99999), thumbStyle: THUMB_OF[tech] ?? ART_OF[inst.pid].style, thumbHue: ART_OF[inst.pid].hue,
+        history: [makeEvent(now, "created", user.name, "Dataset record created")],
       };
       datasets.push(d);
       emitChanged();
@@ -346,7 +348,7 @@ export const mockApi: CatalogApi = {
       d.doi = `10.17199/${d.runNumber}-${d.pid.slice(-4)}`;
       d.validationStatus = "validated";
       d.datasetlifecycle = { ...d.datasetlifecycle, publishable: true, dateOfPublishing: now, publishedOn: now };
-      d.history.push(makeEvent(now, "published", CURRENT_USER.name, `Published with DOI ${d.doi}`));
+      d.history.push(makeEvent(now, "published", user.name, `Published with DOI ${d.doi}`));
       newJob("publish", [d], "DOI registered").statusCode = "finishedSuccessful";
       emitChanged();
       return { ...d };
@@ -371,6 +373,7 @@ export const mockApi: CatalogApi = {
       return job;
     },
   },
+  auth: mockAuth,
   attachments: {
     async list(pid: string) {
       await lag();
@@ -383,12 +386,12 @@ export const mockApi: CatalogApi = {
       const now = new Date().toISOString();
       const made = files.map((f) => ({
         id: nextAttachmentId(), datasetId: pid, caption: "", thumbnail: f.thumbnail, ownerGroup: d.ownerGroup, accessGroups: d.accessGroups, isPublished: d.isPublished,
-        createdBy: CURRENT_USER.email, createdAt: now, updatedAt: now, fileName: f.fileName, mimeType: f.mimeType || "application/octet-stream", size: f.size, dataUrl: f.dataUrl,
+        createdBy: user.email, createdAt: now, updatedAt: now, fileName: f.fileName, mimeType: f.mimeType || "application/octet-stream", size: f.size, dataUrl: f.dataUrl,
       }));
       attachments.unshift(...made);
       const firstImage = made.find((m) => m.mimeType.startsWith("image/"));
       if (firstImage && !d.thumbnailAttachmentId) d.thumbnailAttachmentId = firstImage.id;
-      d.history.push(makeEvent(now, "edited", CURRENT_USER.name, `Attached ${made.length === 1 ? made[0].fileName : `${made.length} files`}`));
+      d.history.push(makeEvent(now, "edited", user.name, `Attached ${made.length === 1 ? made[0].fileName : `${made.length} files`}`));
       emitChanged();
       return made;
     },
@@ -425,7 +428,7 @@ export const mockApi: CatalogApi = {
       const d = datasets.find((x) => x.pid === pid)!;
       const a = id ? attachments.find((x) => x.id === id) : undefined;
       d.thumbnailAttachmentId = a ? a.id : undefined;
-      d.history.push(makeEvent(new Date().toISOString(), "edited", CURRENT_USER.name, a ? `Thumbnail set from ${a.fileName}` : "Thumbnail reset"));
+      d.history.push(makeEvent(new Date().toISOString(), "edited", user.name, a ? `Thumbnail set from ${a.fileName}` : "Thumbnail reset"));
       emitChanged();
       return { ...d };
     },
@@ -499,7 +502,7 @@ export const mockApi: CatalogApi = {
     label: labelFor,
     facetValues: facetOptions,
     searchKeywords: async (text: string, limit?: number) => (await sleep(30), searchKeywords(text, limit)),
-    proposals: () => PROPOSALS.filter((p) => CURRENT_USER.groups.includes(p.ownerGroup)),
+    proposals: () => PROPOSALS.filter((p) => user.groups.includes(p.ownerGroup)),
     instruments: () => INSTRUMENTS,
     samples: () => SAMPLES,
   },

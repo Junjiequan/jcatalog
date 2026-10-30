@@ -10,13 +10,12 @@ import {proposalKind, proposalMeta, type HistoryEvent, type Proposal, type Propo
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { InstrumentChips, TechniqueChips, techniquesOf } from "@/components/InstrumentChips";
 import { ClipRow } from "@/components/ui/Overlay";
-import { INSTRUMENTS } from "@/data/db";
 import { useUI } from "@/store/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Explain, Menu, MenuItem } from "@/components/ui/Overlay";
 import { matchesSearch } from "@/lib/search";
 import { Button } from "@/components/ui/Button";
-import { CURRENT_USER } from "@/data/db";
+import { currentUser } from "@/lib/session";
 import { api } from "@/api";
 import { toast } from "@/store/toasts";
 import { useListView, usePaging } from "@/hooks/hooks";
@@ -77,7 +76,7 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
   const kw = sp.get("kw") ?? "";
   const setKw = (k: string) => setSp((prev) => { const n = new URLSearchParams(prev); if (k) n.set("kw", k); else n.delete("kw"); n.delete("page"); return n; }, { replace: true });
   const list = useMemo(
-    () => (data ?? []).filter((p) => (who === "all" || (who === "mine" ? CURRENT_USER.groups.includes(p.ownerGroup) : p.isPublished)) && proposalKind(p) === kind && (!kw || p.keywords.some((x) => x.toLowerCase() === kw.toLowerCase())) && matchesSearch(q, p.proposalId, p.title, p.pi, p.abstract, p.type, p.keywords, statusOf(p), p.parentProposalId, p.instrumentIds.map((id) => INSTRUMENTS.find((x) => x.pid === id)?.name ?? id))),
+    () => (data ?? []).filter((p) => (who === "all" || (who === "mine" ? currentUser().groups.includes(p.ownerGroup) : p.isPublished)) && proposalKind(p) === kind && (!kw || p.keywords.some((x) => x.toLowerCase() === kw.toLowerCase())) && matchesSearch(q, p.proposalId, p.title, p.pi, p.abstract, p.type, p.keywords, statusOf(p), p.parentProposalId, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))),
     [data, q, who, kind, kw],
   );
   const pg = usePaging(list, `${who}|${q}|${kw}`);
@@ -129,7 +128,7 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
               <div className="flex items-start gap-3">
                 <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", KIND_UI[proposalKind(p)].tile)}>{(() => { const I = KIND_UI[proposalKind(p)].icon; return <I className="h-5 w-5" />; })()}</span>
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5"><ProposalStatus p={p} />{p.isPublished && <Badge tone="success">Public</Badge>}{CURRENT_USER.groups.includes(p.ownerGroup) && <Explain title="Your group" text="One of your groups owns this, so you can see all of its datasets, including unpublished ones."><span className="inline-flex cursor-help"><Badge tone="neutral">Your group</Badge></span></Explain>}</div>
+                  <div className="flex flex-wrap items-center gap-1.5"><ProposalStatus p={p} />{p.isPublished && <Badge tone="success">Public</Badge>}{currentUser().groups.includes(p.ownerGroup) && <Explain title="Your group" text="One of your groups owns this, so you can see all of its datasets, including unpublished ones."><span className="inline-flex cursor-help"><Badge tone="neutral">Your group</Badge></span></Explain>}</div>
                   <h3 className="mt-1 line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug" title={p.title}>{p.title}</h3>
                   <div className="tnum mt-0.5 truncate font-mono text-xs text-muted">{p.proposalId}</div>
                 </div>
@@ -206,7 +205,7 @@ export function ProposalDetailPage() {
   if (!data) return <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-8"><Skeleton className="mb-4 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
   const { proposal: p, parent, experiments, instruments, samples, recent, datasetCount, size } = data;
   const kind = proposalKind(p);
-  const mine = CURRENT_USER.groups.includes(p.ownerGroup);
+  const mine = currentUser().groups.includes(p.ownerGroup);
   const m = (k: string) => proposalMeta(p, k);
   const instName = (iid: string) => instruments.find((x) => x.pid === iid)?.name ?? iid;
   const tabs: { id: PTab; label: string; count?: number }[] = [

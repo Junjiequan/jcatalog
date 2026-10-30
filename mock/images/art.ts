@@ -1,5 +1,5 @@
-import type { ThumbStyle } from "@/types";
-import { detectorImageUrl, isDetectorStyle } from "./detectorImages";
+import type { ThumbStyle } from "../types";
+import { detectorImageUrl, isDetectorStyle } from "./detector";
 
 function prng(seed: number) {
   let a = seed | 0;

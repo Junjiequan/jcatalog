@@ -1,8 +1,6 @@
 export type DatasetType = "raw" | "derived";
 export type Storage = "online" | "archived" | "retrieving";
 export type Scope = "mine" | "shared" | "public" | "all";
-// the first five are generated art (instruments without a drawing); the rest are rendered from the physics of each technique
-export type ThumbStyle = "rings" | "spots" | "micrograph" | "spectrum" | "bands" | "sans" | "single" | "laue" | "radiograph" | "sqw" | "qens" | "powder" | "reflect" | "ins";
 
 export interface MetaValue {
   value: number | string | boolean;
@@ -98,10 +96,6 @@ export interface Dataset {
   doi?: string;
   // the dataset's preview picture is always one of its attachments (as in SciCat); this points at it
   thumbnailAttachmentId?: string;
-  // mock only: how the seeded image attachment of this dataset is drawn
-  thumbSeed: number;
-  thumbStyle: ThumbStyle;
-  thumbHue: number;
   history: HistoryEvent[];
 }
 
@@ -122,8 +116,6 @@ export interface InstrumentMeta {
   techniques: string[];
   description: string;
   contact: string;
-  style: ThumbStyle;
-  hue: number;
   // a real photo, when the facility provides one; otherwise the generated art is used
   image?: string;
 }
@@ -220,6 +212,30 @@ export interface Sample {
 
 // An account is either an administrator or an ordinary user; what someone does in a project comes from their groups
 export type Role = "admin" | "user";
+
+// the signed-in person, as the backend describes them
+export interface AuthUser {
+  name: string;
+  email: string;
+  role: Role;
+  groups: string[];
+}
+export type AuthResult = { ok: true; user: AuthUser } | { ok: false; error: string };
+// a test backend can offer sign-up and ready-made accounts to try
+export interface SignUpInput {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+  // join the sample groups, so the account starts with data to look at
+  withDemoData: boolean;
+}
+export interface DemoAccount {
+  name: string;
+  email: string;
+  role: Role;
+  blurb: string;
+}
 
 // SciCat's PublishedData; the DataCite fields live in `metadata`. `downloads`, `views` and `instrumentIds` are this catalogue's extras.
 export type PublishedStatus = "private" | "public" | "registered" | "amended";
