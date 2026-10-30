@@ -30,5 +30,5 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), filtersYaml()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   // polling when running in a container, where file events from a bind mount do not arrive
-  server: { port: 5173, watch: process.env.CHOKIDAR_USEPOLLING === "true" ? { usePolling: true, interval: 300 } : undefined },
+  server: { port: 4500, watch: process.env.CHOKIDAR_USEPOLLING === "true" ? { usePolling: true, interval: 300 } : undefined },
 });

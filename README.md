@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:4500.
 
 ## Run with Docker
 
@@ -21,7 +21,7 @@ Only Docker is needed, nothing to build or install:
 docker compose up
 ```
 
-Open http://localhost:5173. Your source folder is mounted into the container, so the page reloads as you edit and save. The first start installs the dependencies (a minute); later starts are quick.
+Open http://localhost:4500. Your source folder is mounted into the container, so the page reloads as you edit and save. The first start installs the dependencies (a minute); later starts are quick.
 
 ## Live site
 

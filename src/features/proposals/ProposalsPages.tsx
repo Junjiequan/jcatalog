@@ -125,14 +125,12 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
             // the same card as a sample, with the kind (proposal or experiment) as its icon colour and first badge
             <div key={p.proposalId} className={cardCls(sel.checked(p), "flex flex-col p-5")}>
               <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.proposalId}`} className="-right-2 -top-2" />
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", KIND_UI[proposalKind(p)].tile)}>{(() => { const I = KIND_UI[proposalKind(p)].icon; return <I className="h-5 w-5" />; })()}</span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5"><ProposalStatus p={p} />{p.isPublished && <Badge tone="success">Public</Badge>}{currentUser().groups.includes(p.ownerGroup) && <Explain title="Your group" text="One of your groups owns this, so you can see all of its datasets, including unpublished ones."><span className="inline-flex cursor-help"><Badge tone="neutral">Your group</Badge></span></Explain>}</div>
-                  <h3 className="mt-1 line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug" title={p.title}>{p.title}</h3>
-                  <div className="tnum mt-0.5 truncate font-mono text-xs text-muted">{p.proposalId}</div>
-                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5"><ProposalStatus p={p} />{p.isPublished && <Badge tone="success">Public</Badge>}{currentUser().groups.includes(p.ownerGroup) && <Explain title="Your group" text="One of your groups owns this, so you can see all of its datasets, including unpublished ones."><span className="inline-flex cursor-help"><Badge tone="neutral">Your group</Badge></span></Explain>}</div>
               </div>
+              <h3 className="mt-3 line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug" title={p.title}>{p.title}</h3>
+              <div className="tnum mt-0.5 truncate font-mono text-xs text-muted">{p.proposalId}</div>
               <div className="mt-3 space-y-1.5"><div><InstrumentChips ids={p.instrumentIds} size="sm" /></div><div><TechniqueChips names={techniquesOf(p.instrumentIds)} /></div></div>
               <p className="mt-3 line-clamp-3 flex-1 whitespace-pre-line text-[13px] text-muted">{p.abstract}</p>
               {p.keywords.length > 0 && <div className="mt-3 min-h-[1.75rem]"><KeywordChips words={p.keywords} onPick={setKw} size="sm" /></div>}

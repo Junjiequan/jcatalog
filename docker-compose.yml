@@ -1,4 +1,4 @@
-# Local development with hot reload:  docker compose up      then open http://localhost:5173
+# Local development with hot reload:  docker compose up      then open http://localhost:4500
 # Edit the source on your machine; the page reloads as you save. Nothing to build.
 #
 # Node is here because hot reload is Vite's dev server, which runs on Node (nginx only serves a finished build).
@@ -10,7 +10,7 @@ services:
     # the lock file as it is. Quick when nothing changed.
     command: sh -c "npm install --no-save --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     ports:
-      - "${APP_PORT:-5173}:5173"
+      - "${APP_PORT:-4500}:4500"
     environment:
       # file events from a bind mount are unreliable on macOS and Windows, so the watcher polls
       CHOKIDAR_USEPOLLING: "true"
