@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { proposalLink } from "@/lib/query";
 import { ArrowLeft, ArrowRight, Beaker, Calendar, Check, ChevronRight, Database, FileCode, FileSearch, FileText, Link2, Microscope, MoreHorizontal, Plus, Tag, X } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
-import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb } from "@/components/ui/Primitives";
+import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb, TabBar } from "@/components/ui/Primitives";
 import { useSelection, type SelItem } from "@/store/selection";
 import {proposalKind, proposalMeta, type HistoryEvent, type Proposal, type ProposalKind, storageOf, proposerName} from "@/types";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
@@ -258,17 +258,7 @@ export function ProposalDetailPage() {
         </div>
       </div>
 
-      <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas/90 px-4 backdrop-blur-sm sm:-mx-8 sm:px-8">
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={clsx("relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-medium transition-colors", tab === t.id ? "text-accent" : "text-muted hover:text-fg")}>
-              {t.label}
-              {t.count !== undefined && <span className="tnum rounded-full bg-surface-3 px-1.5 text-[11px] text-muted">{fmtNum(t.count)}</span>}
-              {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar tabs={tabs} value={tab} onChange={setTab} />
 
       <div className="mt-5" key={tab}>
         {tab === "overview" && (

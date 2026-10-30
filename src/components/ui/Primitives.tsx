@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import clsx from "clsx";
 import { Tag, AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, Columns3, Copy, Info, LayoutGrid, Rows3, SearchX, ShieldCheck, type LucideIcon } from "lucide-react";
-import { fmtCount } from "@/lib/format";
+import { fmtCount, fmtNum } from "@/lib/format";
 import { PAGE_SIZES } from "@/lib/query";
 import { useElementWidth } from "@/hooks/hooks";
 import { useUI, type Density, type ListView } from "@/store/ui";
@@ -123,6 +123,23 @@ export function AccountAvatar({ name, role, size = 32 }: { name: string; role: "
   );
 }
 
+// The tabs of a detail page: sticky under the header, scrolling sideways when they do not fit and never up or down
+export function TabBar<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (id: T) => void }) {
+  return (
+    <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas/90 px-4 backdrop-blur-sm sm:-mx-8 sm:px-8">
+      <div role="tablist" className="flex gap-1 overflow-x-auto overflow-y-hidden overscroll-y-none">
+        {tabs.map((t) => (
+          <button key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)} className={clsx("relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-medium transition-colors", value === t.id ? "text-accent" : "text-muted hover:text-fg")}>
+            {t.label}
+            {t.count !== undefined && <span className="tnum rounded-full bg-surface-3 px-1.5 text-[11px] text-muted">{fmtNum(t.count)}</span>}
+            {value === t.id && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Segmented<T extends string>({ value, onChange, options, size = "md", className, stretch }: {
   value: T;
   onChange: (v: T) => void;
@@ -133,7 +150,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = "
   stretch?: boolean;
 }) {
   return (
-    <div className={clsx("inline-flex max-w-full overflow-x-auto rounded-lg bg-surface-3 p-0.5", stretch && "max-sm:flex max-sm:w-full", className)} role="tablist">
+    <div className={clsx("inline-flex max-w-full overflow-x-auto overflow-y-hidden rounded-lg bg-surface-3 p-0.5", stretch && "max-sm:flex max-sm:w-full", className)} role="tablist">
       {options.map((o) => {
         const active = o.value === value;
         const btn = (

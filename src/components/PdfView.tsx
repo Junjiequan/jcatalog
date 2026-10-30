@@ -58,7 +58,7 @@ export default function PdfView({ bytes }: { bytes: Uint8Array }) {
       {!doc || !width ? (
         <Skeleton className="m-4 h-[60vh] rounded-md" />
       ) : (
-        <div className={clsx("flex flex-col gap-4 p-4", zoom > 1 ? "items-start overflow-x-auto" : "items-center")}>
+        <div className={clsx("flex flex-col gap-4 p-4", zoom > 1 ? "items-start overflow-x-auto overflow-y-hidden" : "items-center")}>
           {Array.from({ length: doc.numPages }, (_, i) => <Page key={i + 1} doc={doc} n={i + 1} width={pageWidth} />)}
         </div>
       )}

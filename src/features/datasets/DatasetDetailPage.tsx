@@ -14,7 +14,7 @@ import { AttachmentsTab } from "./AttachmentsTab";
 // the graph library is big and only the Related tab needs it
 const LineageGraph = lazy(() => import("./LineageGraph"));
 import { Menu, MenuItem, MenuSep, Modal, Tip } from "@/components/ui/Overlay";
-import { Badge, CopyButton, EmptyState, ErrorState, Skeleton, KeywordChips, BackButton, Breadcrumb } from "@/components/ui/Primitives";
+import { Badge, CopyButton, EmptyState, ErrorState, Skeleton, KeywordChips, BackButton, Breadcrumb, TabBar } from "@/components/ui/Primitives";
 import { TagInput } from "@/components/ui/TagInput";
 import { currentUser } from "@/lib/session";
 import { api } from "@/api";
@@ -582,17 +582,7 @@ export default function DatasetDetailPage() {
 
       {storageOf(d) !== "online" && tab !== "files" && <div className="mt-4"><RetrievalBanner d={d} onRequested={reload} /></div>}
 
-      <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas/90 px-4 backdrop-blur-sm sm:-mx-8 sm:px-8">
-        <div className="flex gap-1 overflow-x-auto overflow-y-hidden">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={clsx("relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-medium transition-colors", tab === t.id ? "text-accent" : "text-muted hover:text-fg")}>
-              {t.label}
-              {t.count !== undefined && <span className="tnum rounded-full bg-surface-3 px-1.5 text-[11px] text-muted">{fmtNum(t.count)}</span>}
-              {tab === t.id && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar tabs={tabs} value={tab} onChange={setTab} />
 
       <div className="mt-5" key={tab}>
         {tab === "overview" && <Overview d={d} canEdit={canEdit} onUpdate={(n) => mutate(() => n)} goTab={setTab} />}
