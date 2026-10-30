@@ -3,7 +3,7 @@ import { canCreateDatasets, useRole } from "@/lib/permissions";
 import { useNavigate } from "react-router";
 import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
-import { Beaker, Clock, CornerDownLeft, Database, FileText, FlaskConical, Keyboard, Microscope, Moon, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
+import { Beaker, CornerDownLeft, Database, FileText, FlaskConical, Keyboard, Microscope, Moon, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
 import { Kbd } from "@/components/ui/Primitives";
 import { useUI } from "@/store/ui";
 import { useSelection } from "@/store/selection";
@@ -19,11 +19,20 @@ import type { Dataset } from "@/types";
 interface Found { proposals: { id: string; title: string; pi: string; experiment: boolean }[]; samples: { id: string; name: string }[]; instruments: { id: string; name: string; title: string }[] }
 const NONE: Found = { proposals: [], samples: [], instruments: [] };
 
+// the same colours as the proposal and experiment icons elsewhere; one width, so the tags line up
+const KIND_TAG = {
+  dataset: { label: "Dataset", cls: "bg-teal-500/15 text-teal-700 dark:bg-teal-400/15 dark:text-teal-300" },
+  proposal: { label: "Proposal", cls: "bg-accent/15 text-accent" },
+  experiment: { label: "Experiment", cls: "bg-violet-500/15 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300" },
+};
+
 interface Item {
   id: string;
   group: string;
   label: string;
   hint?: string;
+  // what kind of thing it is, shown on every screen size (the hint is not)
+  tag?: { label: string; cls: string };
   icon: LucideIcon;
   run: () => void;
 }
@@ -80,7 +89,7 @@ export function CommandPalette() {
       found.instruments.forEach((x) => out.push({ id: `i-${x.id}`, group: "Instruments", label: x.name, hint: x.title, icon: Microscope, run: go("/instruments") }));
       out.push({ id: "search-all", group: "Search", label: `Search all datasets for “${q.trim()}”`, icon: Search, run: go(`/datasets?scope=all&q=${encodeURIComponent(q.trim())}`) });
     } else {
-      recent.forEach((r) => out.push({ id: `r-${r.pid}`, group: "Recent", label: r.name, hint: r.pid, icon: Clock, run: go(datasetLink(r.pid)) }));
+      recent.forEach((r) => out.push({ id: `r-${r.kind ?? "dataset"}-${r.pid}`, group: "Recent", label: r.name, hint: r.pid, tag: KIND_TAG[r.kind ?? "dataset"], icon: r.kind === "proposal" ? FileText : r.kind === "experiment" ? Beaker : Database, run: go(r.kind === "proposal" || r.kind === "experiment" ? proposalLink(r.pid) : datasetLink(r.pid)) }));
     }
     NAV.filter((n) => !t || n.label.toLowerCase().includes(t)).forEach((n) => out.push({ id: n.to, group: "Go to", label: n.label, hint: n.hint, icon: n.icon, run: go(n.to) }));
     const actions: Item[] = [
@@ -144,9 +153,10 @@ export function CommandPalette() {
                     className={clsx("flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm", i === idx ? "bg-accent-soft text-accent" : "text-fg")}
                   >
                     <it.icon className="h-4 w-4 shrink-0 opacity-70" />
-                    <span className="min-w-0 flex-1 truncate font-medium">{it.label}</span>
-                    {it.hint && <span className="hidden truncate text-xs text-muted sm:block">{it.hint}</span>}
-                    {i === idx && <CornerDownLeft className="h-3.5 w-3.5 shrink-0 opacity-60" />}
+                    <span className="min-w-0 flex-1 truncate font-medium" title={it.label}>{it.label}</span>
+                    {it.hint && <span className="hidden max-w-[12rem] shrink-0 truncate text-xs text-muted sm:block" title={it.hint}>{it.hint}</span>}
+                    {it.tag && <span className={clsx("w-[4.75rem] shrink-0 rounded-md py-0.5 text-center text-[11px] font-semibold", it.tag.cls)}>{it.tag.label}</span>}
+                    <CornerDownLeft className={clsx("h-3.5 w-3.5 shrink-0 opacity-60", i !== idx && "invisible")} />
                   </button>
                 </div>
               );

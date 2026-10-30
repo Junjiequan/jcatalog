@@ -24,6 +24,7 @@ import { confirm } from "@/store/confirm";
 import { useSelection } from "@/store/selection";
 import { toast } from "@/store/toasts";
 import { useUI } from "@/store/ui";
+import { useRecordRecent } from "@/hooks/hooks";
 import {Dataset, FileEntry, HistoryEvent, storageOf, techniqueNames} from "@/types";
 import { RetrievalBanner, fmtMeta, highlights } from "./PeekPanel";
 import { PublishedBadge, StorageBadge, TypeBadge } from "./shared";
@@ -377,7 +378,6 @@ export default function DatasetDetailPage() {
   const { data: d, error, reload, mutate } = useResource(["dataset", pid], () => api.datasets.get(pid));
   const selected = useSelection((s) => !!s.items[pid]);
   const toggleSel = useSelection((s) => s.toggle);
-  const pushRecent = useUI((s) => s.pushRecent);
   const [shareOpen, setShareOpen] = useState(false);
   const [editKw, setEditKw] = useState(false);
   const [kw, setKw] = useState<string[]>([]);
@@ -389,9 +389,9 @@ export default function DatasetDetailPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
 
+  useRecordRecent(d && { kind: "dataset", pid: d.pid, name: d.datasetName });
   useEffect(() => {
     if (d) {
-      pushRecent({ pid: d.pid, name: d.datasetName });
       document.title = `${d.datasetName} · Metadata Catalog`;
     }
     return () => void (document.title = "Metadata Catalog");

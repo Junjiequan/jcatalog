@@ -287,6 +287,12 @@ const mv = (human_name: string, value: string | number) => ({ human_name, value 
 const orcidOf = () => `0000-000${int(1, 4)}-${int(1000, 9999)}-${int(1000, 9999)}`;
 const KEYWORD_POOL = ["WF_00_00", "WF_01_04", "WF_02_01", "calibration", "commissioning", "user programme", "standard sample"];
 
+// one very long id (50 characters) on the proposal listed first, so layouts are tried against it
+{
+  const newest = PROPOSAL_SEEDS.reduce((a, b) => (b[7] < a[7] ? b : a));
+  newest[0] = (newest[0] + "-LONG-IDENTIFIER-TO-TEST-THE-LAYOUT-OF-ROWS-").slice(0, 49) + "X";
+}
+
 export const PROPOSALS: Proposal[] = PROPOSAL_SEEDS.map(([id, title, abstract, pi, group, sampleIds, instrumentIds, ago, dur]) => {
   const start = new Date(NOW - ago * DAY);
   const end = new Date(start.getTime() + dur * DAY);
@@ -503,6 +509,11 @@ for (const p of PROPOSALS) {
 drafts.sort((a, b) => a.t - b.t);
 const pidOf = new Map<number, string>();
 drafts.forEach((d, i) => pidOf.set(d.tmpId, `MDC-${new Date(d.t).getFullYear() % 100}-${String(i + 1).padStart(5, "0")}`));
+// one very long pid (50 characters) on the dataset listed first (the newest), so layouts are tried against it
+{
+  const last = drafts[drafts.length - 1];
+  pidOf.set(last.tmpId, (pidOf.get(last.tmpId)! + "-LONG-PERSISTENT-IDENTIFIER-TO-TEST-THE-LAYOUT-").slice(0, 49) + "X");
+}
 
 let evId = 0;
 const ev = (at: string, kind: HistoryEvent["kind"], actor: string, text: string): HistoryEvent => ({ id: `e${evId++}`, at, kind, actor, text });

@@ -37,4 +37,6 @@ Everything that is fake lives in [`mock/`](mock/): the seeded datasets, proposal
 
 **To remove all dummy data and accounts, delete the `mock/` folder.** The app still builds and then uses the SciCat adapter in `src/api/scicat/` (set `VITE_SCICAT_URL`; its methods are still to be filled in). `VITE_API_MODE=scicat` chooses the backend even while `mock/` exists.
 
+General settings (how many items Recently viewed keeps) are in [`config/app.yaml`](config/app.yaml); like the filter file, it is read when the page loads, so editing it needs no rebuild.
+
 The Datasets filter panel is configured by [`config/filters.yaml`](config/filters.yaml) (order, labels, widgets, limits, which measured properties are offered). Edit it and reload; no rebuild. Mistakes are reported in the browser console and the default is used.

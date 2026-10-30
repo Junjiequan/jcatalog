@@ -1,0 +1,5 @@
+# General settings. Edit this file and reload the page; no rebuild is needed.
+# If a value is wrong, the browser console says so and the default is used.
+
+# How many opened datasets, proposals and experiments "Recently viewed" keeps (1 to 50).
+recentlyViewed: 10

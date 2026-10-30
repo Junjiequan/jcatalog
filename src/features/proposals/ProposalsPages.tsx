@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { currentUser } from "@/lib/session";
 import { api } from "@/api";
 import { toast } from "@/store/toasts";
-import { useListView, usePaging } from "@/hooks/hooks";
+import { useListView, usePaging, useRecordRecent } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { fmtBytes, fmtDate, fmtNum, plural } from "@/lib/format";
 import { datasetLink } from "@/lib/query";
@@ -199,6 +199,8 @@ export function ProposalDetailPage() {
   const [sp, setSp] = useSearchParams();
   const { data, error, reload } = useResource(["proposal", id], () => api.proposals.get(id));
   const inSel = useSelection((s) => !!s.items[`proposal:${id}`]);
+  const seen = data?.proposal;
+  useRecordRecent(seen && { kind: proposalKind(seen), pid: seen.proposalId, name: seen.title });
   if (error) return <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-8"><ErrorState title="Not found" message={error.message} onRetry={reload} /></div>;
   if (!data) return <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-8"><Skeleton className="mb-4 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
   const { proposal: p, parent, experiments, instruments, samples, recent, datasetCount, size } = data;

@@ -1,3 +1,4 @@
+import { appConfig } from "@/lib/appConfig";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -12,7 +13,9 @@ export interface SavedSearch {
   name: string;
   qs: string;
 }
+// what was opened; items saved before proposals were recorded have no kind and are datasets
 export interface RecentItem {
+  kind?: "dataset" | "proposal" | "experiment";
   pid: string;
   name: string;
 }
@@ -78,7 +81,7 @@ export const useUI = create<UIState>()(
       mobileFiltersOpen: false,
       set: (patch) => set(patch),
       toggleColumn: (k) => set((s) => ({ columns: { ...s.columns, [k]: !s.columns[k] } })),
-      pushRecent: (r) => set((s) => ({ recent: [r, ...s.recent.filter((x) => x.pid !== r.pid)].slice(0, 5) })),
+      pushRecent: (r) => set((s) => ({ recent: [r, ...s.recent.filter((x) => x.pid !== r.pid || (x.kind ?? "dataset") !== (r.kind ?? "dataset"))].slice(0, appConfig().recentlyViewed) })),
       saveSearch: (name, qs) => set((s) => ({ savedSearches: [...s.savedSearches, { id: crypto.randomUUID(), name, qs }] })),
       deleteSearch: (id) => set((s) => ({ savedSearches: s.savedSearches.filter((x) => x.id !== id) })),
       updateSearch: (id, patch) => set((s) => ({ savedSearches: s.savedSearches.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),

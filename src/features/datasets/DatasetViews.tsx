@@ -113,7 +113,7 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
             <span className={clsx("max-w-[300px] truncate font-medium", on && "text-accent")} title={d.datasetName}>{d.datasetName}</span>
             {d.isPublished && <PublishedBadge />}
           </div>
-          <div className="sub tnum text-xs text-subtle">{d.pid}</div>
+          <div className="sub tnum max-w-[13rem] truncate text-xs sm:max-w-[300px] text-subtle" title={d.pid}>{d.pid}</div>
           {phone && (
             <>
               <ClipRow className="mt-1" title="Instrument and technique" full={<><InstrumentChips ids={d.instrumentIds} size="sm" onPick={onInstrument} /><TechniqueChips names={techniqueNames(d)} onPick={onTechnique} /></>}><span className="inline-flex items-center gap-1.5"><InstrumentChips ids={d.instrumentIds} size="sm" nowrap onPick={onInstrument} /><TechniqueChips names={techniqueNames(d)} nowrap onPick={onTechnique} /></span></ClipRow>

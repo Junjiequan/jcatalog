@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from "@/lib/query";
-import { useUI, type ListView } from "@/store/ui";
+import { useUI, type ListView, type RecentItem } from "@/store/ui";
+
+// Every detail page calls this once it has loaded what it shows, so "Recently viewed" covers all of them.
+export function useRecordRecent(item: RecentItem | undefined) {
+  const push = useUI((s) => s.pushRecent);
+  useEffect(() => {
+    if (item) push(item);
+  }, [item?.kind, item?.pid]); // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 // Table or cards for a list page, remembered per page.
 export function useListView(key: string, fallback: ListView): [ListView, (v: ListView) => void] {
