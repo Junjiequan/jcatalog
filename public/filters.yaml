@@ -1,0 +1,61 @@
+# Which filters the Datasets side panel shows, in what order, and how.
+# Edit this file and reload the page; no rebuild is needed. If something here is wrong, the browser console
+# says what, and the default panel is used for that part.
+#
+# Only the fields you list are shown, in the order you list them.
+#
+#   field        what it filters
+#   widget       how it looks (the options for each field are below)
+#   label        the section title (default: the usual name)
+#   open         expanded on a first visit (default: false; a section holding a selection always opens)
+#   limit        how many values show before "Show all" or "+N more"
+#   properties   measurements only: the measured properties people may add
+#   enabled      false hides an entry without deleting it
+#
+#   field         widgets
+#   techniques    tiles | rows
+#   instruments   tiles | rows
+#   proposals     rows
+#   keywords      chips | rows
+#   created       timeline
+#   data          toggles   (the Type switch)
+#   measurements  sliders
+
+filters:
+  - field: techniques
+    widget: tiles
+    label: Technique
+    open: true
+    limit: 7
+
+  - field: instruments
+    widget: tiles
+    label: Instrument
+    open: true
+    limit: 5
+
+  - field: measurements
+    widget: sliders
+    label: Measurements
+    # properties:            # uncomment to offer only these measured properties
+    #   - sample_temperature
+    #   - magnetic_field
+    #   - wavelength_band
+
+  - field: proposals
+    widget: rows
+    label: Proposal
+    limit: 5
+
+  - field: created
+    widget: timeline
+    label: Created
+
+  - field: data
+    widget: toggles
+    label: Type
+
+  - field: keywords
+    widget: chips
+    label: Keywords
+    limit: 8

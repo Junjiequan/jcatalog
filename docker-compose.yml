@@ -1,0 +1,7 @@
+# docker compose up      then open http://localhost:8080
+services:
+  catalog:
+    image: ghcr.io/junjiequan/jcatalog:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
