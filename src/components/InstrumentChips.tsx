@@ -1,12 +1,25 @@
 import clsx from "clsx";
+import { useNavigate } from "react-router";
 import { Microscope } from "lucide-react";
 import { api } from "@/api";
 import { TechBadge } from "@/components/ui/Primitives";
 import { MoreChip } from "@/components/ui/Overlay";
 
+// Clicking an instrument or technique anywhere lists the datasets it applies to. The datasets page passes onPick to filter in place;
+// everywhere else the default opens the list, filtered.
+function useShowDatasets() {
+  const nav = useNavigate();
+  return {
+    instrument: (pid: string) => nav(`/datasets?scope=all&inst=${encodeURIComponent(pid)}`),
+    technique: (name: string) => nav(`/datasets?scope=all&tech=${encodeURIComponent(name)}`),
+  };
+}
+
 // A record is measured on one or more instruments. The chip wears the ESS cyan with a solid icon tile, so the instrument reads as the record's identity;
 // techniques are a different thing and live in TechniqueChips, in their own colours and their own row or column.
 export function InstrumentChips({ ids, size = "md", max, nowrap, onPick }: { ids: string[]; size?: "sm" | "md"; max?: number; nowrap?: boolean; onPick?: (id: string) => void }) {
+  const show = useShowDatasets();
+  const pick = onPick ?? show.instrument;
   const all = ids.map((id) => api.options.instruments().find((x) => x.pid === id)).filter((x) => !!x);
   if (!all.length) return null;
   const shown = max ? all.slice(0, max) : all;
@@ -25,10 +38,8 @@ export function InstrumentChips({ ids, size = "md", max, nowrap, onPick }: { ids
             {i.name}
           </>
         );
-        return onPick ? (
-          <button key={i.pid} onClick={(e) => (e.stopPropagation(), onPick(i.pid))} title={`Show datasets from ${i.name}`} className={clsx(cls, "transition-colors hover:border-brand hover:bg-brand/20")}>{body}</button>
-        ) : (
-          <span key={i.pid} title={`${i.name} · ${i.title}`} className={cls}>{body}</span>
+        return (
+          <button key={i.pid} onClick={(e) => (e.stopPropagation(), pick(i.pid))} title={`Show datasets from ${i.name} · ${i.title}`} className={clsx(cls, "transition-colors hover:border-brand hover:bg-brand/20")}>{body}</button>
         );
       })}
       {max !== undefined && all.length > max && <MoreChip count={all.length - max} title="All instruments" tone="muted"><InstrumentChips ids={all.map((i) => i.pid)} size={size} onPick={onPick} /></MoreChip>}
@@ -40,6 +51,8 @@ export function InstrumentChips({ ids, size = "md", max, nowrap, onPick }: { ids
 export const techniquesOf = (ids: string[]) => [...new Set(ids.flatMap((id) => api.options.instruments().find((x) => x.pid === id)?.techniques ?? []))];
 
 export function TechniqueChips({ names, nowrap, onPick }: { names: string[]; nowrap?: boolean; onPick?: (name: string) => void }) {
+  const show = useShowDatasets();
+  const pick = onPick ?? show.technique;
   if (!names.length) return null;
-  return <span className={clsx("inline-flex items-center gap-1.5", nowrap ? "flex-nowrap whitespace-nowrap" : "flex-wrap")}>{names.map((t) => (onPick ? <button key={t} onClick={(e) => (e.stopPropagation(), onPick(t))} className="rounded-md hover:brightness-95 dark:hover:brightness-125"><TechBadge name={t} clickable /></button> : <TechBadge key={t} name={t} />))}</span>;
+  return <span className={clsx("inline-flex items-center gap-1.5", nowrap ? "flex-nowrap whitespace-nowrap" : "flex-wrap")}>{names.map((t) => <button key={t} onClick={(e) => (e.stopPropagation(), pick(t))} className="rounded-md hover:brightness-95 dark:hover:brightness-125"><TechBadge name={t} clickable /></button>)}</span>;
 }

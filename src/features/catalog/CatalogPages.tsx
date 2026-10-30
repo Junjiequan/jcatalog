@@ -152,7 +152,7 @@ export function InstrumentsPage() {
             { key: "name", label: "Instrument", className: "max-w-[280px]", render: (i) => <><div className="truncate font-medium group-hover:text-accent">{i.name}</div><div className="sub truncate text-xs text-muted" title={i.title}>{i.title}</div></> },
             { key: "kind", label: "Kind", className: "whitespace-nowrap", render: (i) => i.kind },
             { key: "loc", label: "Location", className: "whitespace-nowrap", render: (i) => i.location },
-            { key: "tech", label: "Techniques", render: (i) => <span className="flex flex-wrap gap-1">{i.techniques.map((t) => <TechBadge key={t} name={t} />)}</span> },
+            { key: "tech", label: "Techniques", render: (i) => <TechniqueChips names={i.techniques} /> },
             { key: "status", label: "Status", render: (i) => <StatusBadge status={i.status} /> },
             { key: "last", label: "Last run", className: "whitespace-nowrap", render: (i) => (i.lastRun ? fmtDate(i.lastRun) : "—") },
             { key: "n", label: "Datasets", center: true, render: (i) => <span className="tnum font-semibold">{fmtNum(i.datasetCount)}</span> },
@@ -186,7 +186,7 @@ export function InstrumentsPage() {
                   <div className="text-xs text-muted">{i.kind} · {i.location}</div>
                   <h3 className="mt-0.5 text-[15px] font-semibold">{i.name} <span className="font-normal text-muted">— {i.title}</span></h3>
                   <p className="mt-2 line-clamp-3 flex-1 text-[13px] text-muted">{i.description}</p>
-                  <div className="mt-3 mb-4 flex flex-wrap gap-1.5">{i.techniques.map((t) => <TechBadge key={t} name={t} />)}</div>
+                  <div className="mt-3 mb-4"><TechniqueChips names={i.techniques} /></div>
                   <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-[13px]">
                     <span className="tnum text-muted">{fmtNum(i.datasetCount)} datasets{i.lastRun && <> · last run {fmtDate(i.lastRun)}</>}</span>
                     <Link to={`/datasets?scope=all&inst=${i.pid}`} className="flex shrink-0 items-center gap-1 whitespace-nowrap font-medium text-accent hover:underline">Browse <ArrowRight className="h-3.5 w-3.5" /></Link>

@@ -208,8 +208,12 @@ function MetadataTab({ d }: { d: Dataset }) {
   const [q, setQ] = useState("");
   const groups = useMemo(() => {
     const g = new Map<string, [string, Dataset["scientificMetadata"][string]][]>();
+    // every word of the filter must appear in the name (as written or as shown), the value (raw or as shown) or the unit,
+    // so text copied from a row, like "14 Hz" or "proton charge", finds that row
+    const words = q.toLowerCase().replace(/_/g, " ").split(/\s+/).filter(Boolean);
     for (const e of Object.entries(d.scientificMetadata)) {
-      if (q && !`${e[0]} ${e[1].value} ${e[1].unit ?? ""}`.toLowerCase().includes(q.toLowerCase().replace(/ /g, "_")) && !`${e[0]} ${e[1].value}`.toLowerCase().includes(q.toLowerCase())) continue;
+      const hay = `${e[0]} ${humanizeKey(e[0])} ${e[1].value} ${fmtMeta(e[1].value)} ${e[1].unit ?? ""}`.toLowerCase().replace(/_/g, " ");
+      if (!words.every((w) => hay.includes(w))) continue;
       const k = e[1].group ?? "Other";
       g.set(k, [...(g.get(k) ?? []), e]);
     }
@@ -221,7 +225,7 @@ function MetadataTab({ d }: { d: Dataset }) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-subtle" />
-          <input className="field pl-9" placeholder="Filter properties…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="field pl-9" placeholder="Filter by name, value or unit…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <Button onClick={() => (navigator.clipboard?.writeText(exportJson()), toast.success("Measurements copied as JSON"))}>Copy JSON</Button>
         <Button onClick={() => downloadBlob(`${d.datasetName}.metadata.json`, exportJson())}><Download className="h-4 w-4" />Download</Button>

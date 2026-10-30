@@ -1,11 +1,11 @@
 import clsx from "clsx";
 import { useState } from "react";
 import { BookmarkCheck, Eye, EyeOff, Pencil, ShieldCheck, RefreshCw, Trash2 } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Tip } from "@/components/ui/Overlay";
 import { QueryPreview } from "@/features/datasets/QueryPreview";
 import { Button } from "@/components/ui/Button";
-import { Avatar, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
+import { Avatar, BackButton, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
 import { currentUser } from "@/lib/session";
 import { confirm } from "@/store/confirm";
 import { toast } from "@/store/toasts";
@@ -123,6 +123,8 @@ const TABS: { value: Tab; label: string }[] = [{ value: "account", label: "Accou
 
 export default function SettingsPage() {
   const ui = useUI();
+  const nav = useNavigate();
+  const loc = useLocation();
   // "cards" or "table" when every page agrees, otherwise mixed
   const shown = [ui.view === "grid" ? "cards" : "table", ...LIST_PAGES.map(([key, , fallback]) => ui.listViews[key] ?? fallback)];
   const allViews: ListView | "mixed" = shown.every((v) => v === shown[0]) ? (shown[0] as ListView) : "mixed";
@@ -134,6 +136,8 @@ export default function SettingsPage() {
   const setTab = (t: Tab) => setSp((prev) => { const n = new URLSearchParams(prev); n.set("tab", t); return n; }, { replace: true });
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 animate-fade-in sm:px-8 sm:py-8">
+      {/* the page's own title is right below, so Back stands alone */}
+      <BackButton className="mb-4" onClick={() => (loc.key !== "default" ? nav(-1) : nav("/datasets"))} />
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted">Make Metadata Catalog work the way you do.</p>
