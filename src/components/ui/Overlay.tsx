@@ -153,7 +153,7 @@ export function ClipRow({ children, full, title = "Full details", className }: {
   );
 }
 
-const SIZES = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
+const SIZES = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl", "2xl": "max-w-6xl" };
 
 export function Modal({ open, onOpenChange, title, description, children, footer, size = "md", bare }: {
   open: boolean;

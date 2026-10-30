@@ -1,16 +1,18 @@
 import { proposalLink } from "@/lib/query";
 import { canManage, useRole } from "@/lib/permissions";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import clsx from "clsx";
 import {
-  ArrowLeft, Check, ChevronRight, Clock, Download, FileArchive, FileCode, FileImage, FileText, Folder, Globe, HardDrive, Link2, Lock, MoreHorizontal, Pencil, Plus, Search, Share2, Trash2, Users, X, Database, FlaskConical, Microscope, FileBox, GitBranch, Sparkles, Eye,
+  ArrowLeft, Check, ChevronRight, Clock, Download, FileArchive, FileCode, FileImage, FileText, Folder, Globe, HardDrive, Link2, Lock, Maximize2, MoreHorizontal, Pencil, Plus, Search, Share2, Trash2, Users, X, Database, FlaskConical, Microscope, FileBox, GitBranch, Sparkles, Eye,
 } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { InstrumentChips, TechniqueChips } from "@/components/InstrumentChips";
 import { Button } from "@/components/ui/Button";
 import { AttachmentsTab } from "./AttachmentsTab";
+// the graph library is big and only the Related tab needs it
+const LineageGraph = lazy(() => import("./LineageGraph"));
 import { Menu, MenuItem, MenuSep, Modal, Tip } from "@/components/ui/Overlay";
 import { Badge, CopyButton, EmptyState, ErrorState, Skeleton, KeywordChips, BackButton, Breadcrumb } from "@/components/ui/Primitives";
 import { TagInput } from "@/components/ui/TagInput";
@@ -334,6 +336,7 @@ function MiniCard({ d }: { d: Dataset }) {
 
 function RelatedTab({ d }: { d: Dataset }) {
   const { data, error, reload } = useResource(["dataset-related", d.pid], () => api.datasets.related(d.pid));
+  const [big, setBig] = useState(false);
   if (error) return <ErrorState onRetry={reload} />;
   const Section = ({ title, items, empty }: { title: string; items?: Dataset[]; empty: string }) => (
     <Card title={title}>
@@ -342,6 +345,13 @@ function RelatedTab({ d }: { d: Dataset }) {
   );
   return (
     <div className="space-y-5">
+      <Card title="Lineage" action={<Button size="sm" variant="ghost" onClick={() => setBig(true)}><Maximize2 className="h-3.5 w-3.5" />Expand</Button>}>
+        <p className="mb-3 text-[13px] text-muted">What this dataset was made from and what was made from it; each arrow names the software that produced the next dataset. Click a dataset to open it.</p>
+        <Suspense fallback={<Skeleton className="h-[380px] w-full rounded-xl sm:h-[460px]" />}><LineageGraph d={d} className="h-[380px] sm:h-[460px]" /></Suspense>
+      </Card>
+      <Modal open={big} onOpenChange={setBig} title="Lineage" description={d.datasetName} size="2xl">
+        {big && <Suspense fallback={<Skeleton className="h-[70vh] w-full rounded-xl" />}><LineageGraph d={d} className="h-[70vh]" expanded /></Suspense>}
+      </Modal>
       <div className="grid gap-3 sm:grid-cols-3">
         {[
           { icon: Database, label: "Proposal", title: d.proposalTitle, sub: d.proposalId, to: proposalLink(d.proposalId) },
@@ -360,7 +370,6 @@ function RelatedTab({ d }: { d: Dataset }) {
       </div>
       <Section title="Derived from" items={data?.sources} empty="This is original (raw) data — it wasn't derived from another dataset." />
       <Section title="Derived datasets" items={data?.derived} empty="No datasets have been derived from this one yet." />
-      <Section title="More from the same proposal" items={data?.siblings} empty="No other datasets in this proposal." />
     </div>
   );
 }
@@ -385,6 +394,8 @@ export default function DatasetDetailPage() {
   const [publishing, setPublishing] = useState(false);
   useRole();
   const attachmentList = useResource(["attachments", pid], () => api.attachments.list(pid));
+  // the same query the Related tab makes, so the tab's count costs nothing extra
+  const related = useResource(["dataset-related", pid], () => api.datasets.related(pid), { enabled: !!d });
   const [editName, setEditName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -430,7 +441,7 @@ export default function DatasetDetailPage() {
     { id: "metadata", label: "Measurements", count: metaCount },
     { id: "files", label: "Files", count: d.numberOfFiles },
     { id: "attachments", label: "Attachments", count: attachmentList.data?.length },
-    { id: "related", label: "Related" },
+    { id: "related", label: "Related", count: related.data && related.data.sources.length + related.data.derived.length },
     { id: "history", label: "History", count: d.history.length },
   ];
 
@@ -568,12 +579,12 @@ export default function DatasetDetailPage() {
       {storageOf(d) !== "online" && tab !== "files" && <div className="mt-4"><RetrievalBanner d={d} onRequested={reload} /></div>}
 
       <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas/90 px-4 backdrop-blur-sm sm:-mx-8 sm:px-8">
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex gap-1 overflow-x-auto overflow-y-hidden">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={clsx("relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-medium transition-colors", tab === t.id ? "text-accent" : "text-muted hover:text-fg")}>
               {t.label}
               {t.count !== undefined && <span className="tnum rounded-full bg-surface-3 px-1.5 text-[11px] text-muted">{fmtNum(t.count)}</span>}
-              {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
+              {tab === t.id && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
             </button>
           ))}
         </div>

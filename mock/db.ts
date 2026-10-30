@@ -32,7 +32,16 @@ const pick = <T,>(a: T[]): T => a[Math.floor(rnd() * a.length)];
 const int = (a: number, b: number) => Math.floor(a + rnd() * (b - a + 1));
 const flt = (a: number, b: number, d = 2) => +(a + rnd() * (b - a)).toFixed(d);
 const chance = (p: number) => rnd() < p;
-const shuffle = <T,>(a: T[]) => [...a].sort(() => rnd() - 0.5);
+// Fisher-Yates: a sort with a random comparator is not deterministic (V8 calls the comparator a varying number of
+// times for the same input), and the whole seed would drift from one page load to the next
+const shuffle = <T,>(a: T[]) => {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+};
 const DAY = 86400000;
 // the start of today (UTC): the seed is the same on every reload within a day, so links, selections and recent items keep pointing at the same records
 const NOW = Math.floor(Date.now() / DAY) * DAY;
@@ -453,7 +462,8 @@ const runCode = (inst: Instrument, run: string) => `${inst.name.toUpperCase().re
 
 interface Draft {
   tmpId: number;
-  srcTmp?: number;
+  // the datasets this one was made from (empty for raw data)
+  srcTmps: number[];
   derived: boolean;
   p: Proposal;
   inst: Instrument;
@@ -472,37 +482,48 @@ interface Draft {
 
 const drafts: Draft[] = [];
 let tmp = 0;
+// one dataset: raw, or made from the given sources (then it keeps their instrument, sample and technique).
+// A derived dataset always comes after its sources, however close to today they are; `latest` caps that.
+function draft(p: Proposal, srcs: Draft[], latest = NOW - 3600000): Draft {
+  const src = srcs[0];
+  // pick first, outside the predicates: pick() draws anew on every call
+  const instId = pick(p.instrumentIds);
+  const sampleId = pick(p.sampleIds);
+  const inst = src ? src.inst : INSTRUMENTS.find((x) => x.pid === instId)!;
+  const sample = src ? src.sample : SAMPLES.find((x) => x.sampleId === sampleId)!;
+  const tech = src ? src.tech : pick(inst.techniques);
+  const start = new Date(p.startTime).getTime();
+  const dur = new Date(p.endTime).getTime() - start;
+  const t = src ? Math.min(Math.max(...srcs.map((x) => x.t)) + int(1, 10) * DAY, latest) : Math.min(start + rnd() * dur, NOW - int(2, 60) * 3600000);
+  const [lo, hi, flo, fhi] = SIZE_GB[tech] ?? [1, 10, 10, 1000];
+  const f = src ? 0.03 : 1;
+  return {
+    tmpId: tmp++, srcTmps: srcs.map((x) => x.tmpId), derived: !!src, p, inst, sample, tech, t,
+    cond: src ? CONDITIONS[0] : pick(CONDITIONS),
+    size: Math.round(flt(lo, hi, 2) * GB * f),
+    files: Math.max(1, Math.round(int(flo, fhi) * (src ? 0.02 : 1))),
+    keywords: [tech.toLowerCase(), ...shuffle(SAMPLE_KEYWORDS[sample.sampleId] ?? []).slice(0, 2)],
+    meta: genMeta(tech),
+    thumbSeed: int(1, 99999),
+    thumbHue: ART_OF[inst.pid].hue + int(-10, 10),
+    acq: int(12, 420) * 60000,
+  };
+}
 for (const p of PROPOSALS) {
   const n = LIGHT.has(p.proposalId) ? int(1, 2) : int(8, 14);
   const rawCount = Math.round(n * 0.86);
   const raws: Draft[] = [];
   for (let i = 0; i < n; i++) {
-    const derived = i >= rawCount;
-    const src = derived ? pick(raws) : undefined;
-    const instId = pick(p.instrumentIds);
-    const sampleId = pick(p.sampleIds);
-    const inst = src ? src.inst : INSTRUMENTS.find((x) => x.pid === instId)!;
-    const sample = src ? src.sample : SAMPLES.find((x) => x.sampleId === sampleId)!;
-    const tech = src ? src.tech : pick(inst.techniques);
-    const start = new Date(p.startTime).getTime();
-    const dur = new Date(p.endTime).getTime() - start;
-    let t = src ? src.t + int(1, 10) * DAY : start + rnd() * dur;
-    t = Math.min(t, NOW - int(2, 60) * 3600000);
-    const [lo, hi, flo, fhi] = SIZE_GB[tech] ?? [1, 10, 10, 1000];
-    const f = derived ? 0.03 : 1;
-    const d: Draft = {
-      tmpId: tmp++, srcTmp: src?.tmpId, derived, p, inst, sample, tech, t,
-      cond: src ? CONDITIONS[0] : pick(CONDITIONS),
-      size: Math.round(flt(lo, hi, 2) * GB * f),
-      files: Math.max(1, Math.round(int(flo, fhi) * (derived ? 0.02 : 1))),
-      keywords: [tech.toLowerCase(), ...shuffle(SAMPLE_KEYWORDS[sample.sampleId] ?? []).slice(0, 2)],
-      meta: genMeta(tech),
-      thumbSeed: int(1, 99999),
-      thumbHue: ART_OF[inst.pid].hue + int(-10, 10),
-      acq: int(12, 420) * 60000,
-    };
-    if (!derived) raws.push(d);
+    const d = draft(p, i >= rawCount ? [pick(raws)] : []);
+    if (!d.derived) raws.push(d);
     drafts.push(d);
+  }
+  // the first proposal gets a fuller family, so the lineage graph has something to show: a raw dataset with several
+  // derived datasets, a dataset merged from two raw ones, and a dataset derived from a derived one
+  if (p === PROPOSALS[0] && raws.length >= 2) {
+    const [a, b] = raws;
+    const fan = [0, 1, 2].map(() => draft(p, [a]));
+    drafts.push(...fan, draft(p, [a, b]), draft(p, [fan[0]], NOW - 1800000));
   }
 }
 
@@ -524,11 +545,13 @@ const runOf = new Map<string, number>();
 const done = new Map<number, Dataset>();
 export const datasets: SeedDataset[] = drafts.map((d) => {
   const { p, inst, sample, tech } = d;
-  const src = d.srcTmp !== undefined ? done.get(d.srcTmp)! : undefined;
+  const srcs = d.srcTmps.map((x) => done.get(x)!);
+  const src = srcs[0] as Dataset | undefined;
   const n = (runOf.get(inst.pid) ?? int(4000, 60000)) + (src ? 0 : int(1, 28));
   if (!src) runOf.set(inst.pid, n);
   const runNumber = src ? src.runNumber : String(n).padStart(8, "0");
-  const datasetName = src ? `${src.datasetName}_${pick(DERIVED_SUFFIX)}` : runCode(inst, runNumber);
+  // a second step gets a suffix its source does not already carry
+  const datasetName = src ? `${src.datasetName}_${srcs.length > 1 ? "merged" : pick(DERIVED_SUFFIX.filter((x) => !src.datasetName.endsWith(`_${x}`)))}` : runCode(inst, runNumber);
   const creation = new Date(d.t).toISOString();
   const endTime = new Date(d.t - int(1, 9) * 60000).toISOString();
   const startTime = new Date(d.t - d.acq).toISOString();
@@ -541,7 +564,7 @@ export const datasets: SeedDataset[] = drafts.map((d) => {
     pid: pidOf.get(d.tmpId)!,
     datasetName,
     description: src
-      ? `${pick(["Reduced", "Integrated", "Refined", "Aligned"])} data derived from ${src.datasetName}. ${pick(NOTES)}`
+      ? `${srcs.length > 1 ? "Merged" : pick(["Reduced", "Integrated", "Refined", "Aligned"])} data derived from ${srcs.map((x) => x.datasetName).join(" and ")}. ${pick(NOTES)}`
       : `${TECH_LONG[tech]} of ${sample.sampleName} (${d.cond}), run ${runNumber}. ${pick(NOTES)}`,
     type: d.derived ? "derived" : "raw",
     ownerGroup: p.ownerGroup,
@@ -576,9 +599,9 @@ export const datasets: SeedDataset[] = drafts.map((d) => {
     proposalIds: [p.proposalId],
     sampleIds: [sample.sampleId],
     instrumentIds: [inst.pid],
-    inputDatasets: src ? [src.pid] : [],
+    inputDatasets: srcs.map((x) => x.pid),
     usedSoftware: src ? [pick(REDUCTION_SOFTWARE)] : [],
-    jobParameters: src ? { inputRun: src.runNumber, normalisation: pick(["monitor", "proton charge"]), backgroundSubtraction: chance(0.8) } : undefined,
+    jobParameters: src ? { inputRun: srcs.map((x) => x.runNumber).join(", "), normalisation: pick(["monitor", "proton charge"]), backgroundSubtraction: chance(0.8) } : undefined,
     scientificMetadata: d.meta,
     createdBy: src ? "reductionService" : "ingestor",
     updatedBy: src ? "reductionService" : "ingestor",

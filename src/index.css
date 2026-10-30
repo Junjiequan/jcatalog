@@ -193,3 +193,29 @@
     @apply pointer-events-auto h-[18px] w-[18px] cursor-pointer rounded-full border-2 border-surface bg-accent shadow-card;
   }
 }
+
+/* the lineage graph (React Flow) in the app's colours */
+.lineage {
+  --xy-background-color: var(--color-canvas);
+  --xy-background-pattern-color: var(--color-line-strong);
+  --xy-edge-stroke: var(--color-line-strong);
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-stroke-selected: var(--color-accent);
+  --xy-controls-button-background-color: var(--color-surface);
+  --xy-controls-button-background-color-hover: var(--color-surface-2);
+  --xy-controls-button-color: var(--color-muted);
+  --xy-controls-button-color-hover: var(--color-fg);
+  --xy-controls-button-border-color: var(--color-line);
+  --xy-controls-box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  --xy-minimap-background-color: var(--color-surface);
+  --xy-minimap-node-background-color: var(--color-line-strong);
+  --xy-minimap-mask-background-color: rgb(0 0 0 / 0.08);
+  --xy-attribution-background-color: transparent;
+}
+/* the labels always paint above the lines */
+.lineage .react-flow__edgelabel-renderer { z-index: 2; }
+/* edges attach to the sides of a card; the handles themselves are not shown */
+.lineage .react-flow__handle { width: 1px; height: 1px; min-width: 0; min-height: 0; border: 0; background: transparent; opacity: 0; pointer-events: none; }
+.lineage .react-flow__attribution { font-size: 9px; color: var(--color-subtle); }
+.lineage .react-flow__attribution a { color: inherit; }
+
