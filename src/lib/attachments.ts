@@ -43,7 +43,7 @@ export function readDataUrl(file: File): Promise<string> {
 export const textToDataUrl = (text: string, mime = "text/plain") => `data:${mime};charset=utf-8;base64,${btoa(unescape(encodeURIComponent(text)))}`;
 
 // the bytes of a data: URL
-function bytesOf(dataUrl: string): Uint8Array {
+export function bytesOf(dataUrl: string): Uint8Array {
   const comma = dataUrl.indexOf(",");
   const head = dataUrl.slice(0, comma);
   const body = dataUrl.slice(comma + 1);
@@ -160,3 +160,4 @@ export async function makeThumbnail(f: { fileName: string; mimeType: string; dat
   ctx.fillText(f.fileName.length > 34 ? `${f.fileName.slice(0, 31)}…` : f.fileName, TW / 2, TH - 40);
   return c.toDataURL("image/jpeg", 0.85);
 }
+

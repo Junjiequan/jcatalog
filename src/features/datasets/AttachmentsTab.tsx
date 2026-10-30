@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Download, Eye, File as FileIcon, FileCode, FileText, ImageIcon, Music, Paperclip, Pencil, Star, Trash2, Upload, Video, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal, Tip } from "@/components/ui/Overlay";
@@ -8,7 +8,7 @@ import { api } from "@/api";
 import { useResource } from "@/api/hooks";
 import { confirm } from "@/store/confirm";
 import { toast } from "@/store/toasts";
-import { dataUrlToBlob, dataUrlToText, extOf, kindOf, langOf, makeThumbnail, readDataUrl, saveDataUrl, type FileKind } from "@/lib/attachments";
+import { dataUrlToBlob, dataUrlToText, extOf, kindOf, langOf, makeThumbnail, readDataUrl, saveDataUrl, type FileKind, bytesOf } from "@/lib/attachments";
 import { fmtBytes, fmtDate } from "@/lib/format";
 import type { Attachment, Dataset } from "@/types";
 
@@ -52,21 +52,22 @@ export function AttachmentsTab({ d, canEdit, onDataset }: { d: Dataset; canEdit:
     if (ok.length < files.length) toast.error("Some files are too large", { description: `Files up to ${fmtBytes(MAX_BYTES)} can be attached here.` });
     if (!ok.length) return;
     setBusy((n) => n + ok.length);
-    try {
-      const prepared = await Promise.all(
-        ok.map(async (f) => {
-          const dataUrl = await readDataUrl(f);
-          const meta = { fileName: f.name, mimeType: f.type, size: f.size, dataUrl };
-          return { ...meta, thumbnail: await makeThumbnail(meta) };
-        }),
-      );
-      const made = await api.attachments.add(d.pid, prepared);
+    const made: Attachment[] = [];
+    for (const f of ok) {
+      try {
+        const dataUrl = await readDataUrl(f);
+        const meta = { fileName: f.name, mimeType: f.type, size: f.size, dataUrl };
+        made.push(...(await api.attachments.add(d.pid, [{ ...meta, thumbnail: await makeThumbnail(meta) }])));
+      } catch (e) {
+        // the backend says why: the same file is already attached, no permission…
+        toast.error(`Couldn't attach ${f.name}`, { description: e instanceof Error ? e.message : "Try again." });
+      } finally {
+        setBusy((n) => n - 1);
+      }
+    }
+    if (made.length) {
       mutate((cur) => [...made, ...cur]);
       toast.success(made.length === 1 ? `Attached ${made[0].fileName}` : `Attached ${made.length} files`);
-    } catch {
-      toast.error("Couldn't attach the files", { description: "Try again, or attach them one at a time." });
-    } finally {
-      setBusy((n) => n - ok.length);
     }
   };
 
@@ -110,7 +111,6 @@ export function AttachmentsTab({ d, canEdit, onDataset }: { d: Dataset; canEdit:
           <p className="mt-0.5 text-[13px] text-muted">Pictures, PDFs, scripts or any other file that explains this dataset. Pick one as its thumbnail.</p>
         </div>
         <div className="flex items-center gap-2">
-          {d.thumbnailAttachmentId && canEdit && <Button size="sm" variant="ghost" onClick={resetThumb}>Remove thumbnail</Button>}
           {canEdit && (
             <>
               <input ref={input} type="file" multiple hidden onChange={(e) => (void upload(e.target.files ?? []), (e.target.value = ""))} />
@@ -124,6 +124,9 @@ export function AttachmentsTab({ d, canEdit, onDataset }: { d: Dataset; canEdit:
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-xl" />)}</div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {list.map((a) => (
+            <AttachmentCard key={a.id} a={a} isThumb={d.thumbnailAttachmentId === a.id} canEdit={canEdit} onOpen={() => setOpen(a)} onRemove={() => remove(a)} onThumb={() => (d.thumbnailAttachmentId === a.id ? resetThumb() : makeThumb(a))} onCaption={async (caption) => { const next = await api.attachments.update(a.id, { caption }); mutate((cur) => cur.map((x) => (x.id === a.id ? next : x))); }} />
+          ))}
           {canEdit && (
             <button
               onClick={() => input.current?.click()}
@@ -134,9 +137,6 @@ export function AttachmentsTab({ d, canEdit, onDataset }: { d: Dataset; canEdit:
               <span className="text-xs">Any format, up to {fmtBytes(MAX_BYTES)} each</span>
             </button>
           )}
-          {list.map((a) => (
-            <AttachmentCard key={a.id} a={a} isThumb={d.thumbnailAttachmentId === a.id} canEdit={canEdit} onOpen={() => setOpen(a)} onRemove={() => remove(a)} onThumb={() => makeThumb(a)} onCaption={async (caption) => { const next = await api.attachments.update(a.id, { caption }); mutate((cur) => cur.map((x) => (x.id === a.id ? next : x))); }} />
-          ))}
           {!list.length && !canEdit && <p className="col-span-full py-10 text-center text-sm text-muted">Nothing has been attached to this dataset.</p>}
         </div>
       )}
@@ -180,8 +180,8 @@ function AttachmentCard({ a, isThumb, canEdit, onOpen, onRemove, onThumb, onCapt
         <div className="mt-auto flex items-center gap-0.5 pt-2">
           <Tip label="Download"><Button size="icon-sm" variant="ghost" aria-label="Download" onClick={() => saveDataUrl(a.fileName, a.dataUrl, a.mimeType)}><Download className="h-4 w-4" /></Button></Tip>
           {canEdit && (
-            <Tip label={isThumb ? "This is the dataset's thumbnail" : "Use as the dataset's thumbnail"}>
-              <Button size="icon-sm" variant="ghost" aria-label={isThumb ? "Current thumbnail" : "Use as thumbnail"} aria-pressed={isThumb} onClick={isThumb ? undefined : onThumb} className={clsx(isThumb && "cursor-default hover:bg-transparent")}>
+            <Tip label={isThumb ? "The dataset's thumbnail · click to remove" : "Use as the dataset's thumbnail"}>
+              <Button size="icon-sm" variant="ghost" aria-label={isThumb ? "Remove as thumbnail" : "Use as thumbnail"} aria-pressed={isThumb} onClick={onThumb}>
                 <Star className={clsx("h-4 w-4", isThumb && "fill-amber-400 text-amber-400")} />
               </Button>
             </Tip>
@@ -194,18 +194,22 @@ function AttachmentCard({ a, isThumb, canEdit, onOpen, onRemove, onThumb, onCapt
 }
 
 // What each kind of file shows: the thing itself where a browser can, its text where it is text, and a plain card for the rest
+// pdf.js is big and only a PDF preview needs it
+const PdfView = lazy(() => import("@/components/PdfView"));
+
 function Preview({ a }: { a: Attachment }) {
   const kind = kindOf(a.fileName, a.mimeType);
   const [blobUrl, setBlobUrl] = useState<string>();
+  const bytes = useMemo(() => (kind === "pdf" ? bytesOf(a.dataUrl) : undefined), [a.dataUrl, kind]);
   useEffect(() => {
-    if (kind !== "pdf" && kind !== "video" && kind !== "audio") return;
+    if (kind !== "video" && kind !== "audio") return;
     const url = URL.createObjectURL(dataUrlToBlob(a.dataUrl, a.mimeType));
     setBlobUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [a.dataUrl, a.mimeType, kind]);
 
   if (kind === "image") return <ImageViewer src={a.dataUrl} alt={a.fileName} />;
-  if (kind === "pdf") return blobUrl ? <iframe src={blobUrl} title={a.fileName} className="h-[68vh] w-full border-0" /> : <Skeleton className="h-[60vh] w-full rounded-none" />;
+  if (kind === "pdf") return <Suspense fallback={<Skeleton className="h-[60vh] w-full rounded-none" />}><PdfView bytes={bytes!} /></Suspense>;
   if (kind === "video") return <div className="bg-black">{blobUrl && <video src={blobUrl} controls className="mx-auto max-h-[68vh] w-full" />}</div>;
   if (kind === "audio") return <div className="flex items-center justify-center p-10">{blobUrl && <audio src={blobUrl} controls className="w-full max-w-md" />}</div>;
   if (kind === "text" || kind === "code") return <TextPreview a={a} />;

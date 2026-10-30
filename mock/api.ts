@@ -185,6 +185,19 @@ function prng(seed: number) {
   };
 }
 
+// a content hash of a data URL, cached: the seeded pictures are drawn on first use and are not small
+const hashes = new Map<string, string>();
+async function contentHash(dataUrl: string): Promise<string> {
+  const key = dataUrl.length > 4096 ? `${dataUrl.length}:${dataUrl.slice(0, 2048)}:${dataUrl.slice(-2048)}` : dataUrl;
+  let h = hashes.get(key);
+  if (!h) {
+    const bytes = new TextEncoder().encode(dataUrl);
+    h = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    hashes.set(key, h);
+  }
+  return h;
+}
+
 function genFiles(d: SeedDataset): { files: FileEntry[]; total: number } {
   const r = prng(d.thumbSeed ?? 1);
   const t0 = new Date(d.creationTime).getTime();
@@ -383,6 +396,15 @@ export const mockApi: CatalogApi = {
       await sleep(250);
       const d = datasets.find((x) => x.pid === pid)!;
       if (!canManage(d.ownerGroup)) throw new Error("You don't have permission to change this dataset.");
+      // the same bytes are not attached twice, whatever the file is called (a real backend keeps a hash per attachment)
+      const known = new Map<string, string>();
+      for (const a of attachments) if (a.datasetId === pid) known.set(await contentHash(a.dataUrl), a.fileName);
+      for (const f of files) {
+        const h = await contentHash(f.dataUrl);
+        const existing = known.get(h);
+        if (existing) throw new Error(`${f.fileName} is already attached${existing === f.fileName ? "" : ` as ${existing}`}.`);
+        known.set(h, f.fileName);
+      }
       const now = new Date().toISOString();
       const made = files.map((f) => ({
         id: nextAttachmentId(), datasetId: pid, caption: "", thumbnail: f.thumbnail, ownerGroup: d.ownerGroup, accessGroups: d.accessGroups, isPublished: d.isPublished,

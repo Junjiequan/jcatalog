@@ -103,6 +103,7 @@ export interface CatalogApi {
   };
   attachments: {
     list(pid: string): Promise<Attachment[]>;
+    // rejects a file whose content is already attached to the dataset; the error's message names that attachment
     add(pid: string, files: { fileName: string; mimeType: string; size: number; dataUrl: string; thumbnail?: string }[]): Promise<Attachment[]>;
     update(id: string, patch: { caption: string }): Promise<Attachment>;
     remove(id: string): Promise<void>;
