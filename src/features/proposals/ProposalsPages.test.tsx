@@ -26,7 +26,7 @@ describe("the proposals list", () => {
   it("narrows as you type, and says so when nothing matches", async () => {
     const { user } = await renderApp("/proposals");
     await user.type(await search("proposals"), "zzzznothing");
-    expect(await screen.findByText(/No proposals|Nothing/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^No proposals match/ })).toBeInTheDocument();
   });
 
   it("selects a proposal into the shared selection", async () => {

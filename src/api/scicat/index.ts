@@ -48,7 +48,7 @@ export const scicatApi: CatalogApi = {
   attachments: { list: todo("GET /datasets/{pid}/attachments"), add: todo("POST /datasets/{pid}/attachments"), update: todo("PATCH /datasets/{pid}/attachments/{id}"), remove: todo("DELETE /datasets/{pid}/attachments/{id}"), picture: todo("GET /datasets/{pid}/attachments/{id}"), setThumbnail: todo("PATCH /datasets/{pid}") },
   samples: { list: todo("GET /samples"), get: todo("GET /samples/{id} + GET /datasets?filter=sampleId") },
   instruments: { list: todo("GET /instruments") },
-  published: { list: todo("GET /publisheddata") },
+  published: { list: todo("GET /publisheddata"), get: todo("GET /publisheddata/{pid} + GET /datasets?filter=pid") },
   jobs: { list: todo("GET /jobs"), retry: todo("POST /jobs") },
   options: {
     label: (_field, value) => value,

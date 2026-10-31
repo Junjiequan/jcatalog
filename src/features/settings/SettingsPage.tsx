@@ -3,13 +3,13 @@ import { useState } from "react";
 import { BookmarkCheck, Eye, EyeOff, Pencil, ShieldCheck, RefreshCw, Trash2 } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Tip } from "@/components/ui/Overlay";
-import { QueryPreview } from "@/features/datasets/QueryPreview";
+import { QueryPreview, SearchSummary } from "@/features/datasets/QueryPreview";
 import { Button } from "@/components/ui/Button";
 import { BackButton, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
 import { currentUser } from "@/lib/session";
 import { confirm } from "@/store/confirm";
 import { toast } from "@/store/toasts";
-import { useUI, type Density, type ListView, type Theme, type View } from "@/store/ui";
+import { SEARCH_KINDS, kindOf, useUI, type SearchKind, type Density, type ListView, type Theme, type View } from "@/store/ui";
 
 const makeToken = () => "mdc_" + Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -24,7 +24,9 @@ function Row({ title, desc, children, tone }: { title: string; desc?: string; ch
 
 // Every saved search, with rename in place, a preview of what it applies, apply, and delete
 function SavedSearchesSection() {
-  const saved = useUI((s) => s.savedSearches);
+  const all = useUI((s) => s.savedSearches);
+  const [kind, setKind] = useState<SearchKind>("datasets");
+  const saved = all.filter((s) => kindOf(s) === kind);
   const update = useUI((s) => s.updateSearch);
   const del = useUI((s) => s.deleteSearch);
   const nav = useNavigate();
@@ -43,8 +45,8 @@ function SavedSearchesSection() {
         {saved.length > 0 && (
           <Button
             onClick={async () => {
-              if (await confirm({ title: "Delete all saved searches?", description: `${saved.length} saved searches will be removed.`, confirmLabel: "Delete all", tone: "danger" })) {
-                useUI.getState().set({ savedSearches: [] });
+              if (await confirm({ title: `Delete all saved ${SEARCH_KINDS[kind].label.toLowerCase()} searches?`, description: `${saved.length} saved searches will be removed.`, confirmLabel: "Delete all", tone: "danger" })) {
+                useUI.getState().set({ savedSearches: all.filter((x) => kindOf(x) !== kind) });
                 toast.info("Saved searches cleared");
               }
             }}
@@ -53,10 +55,20 @@ function SavedSearchesSection() {
           </Button>
         )}
       </div>
-      <ul className="divide-y divide-line">
+      {/* one tab per kind of list a search can be saved for; plain underlined text, like the page tabs */}
+      <div role="tablist" className="flex gap-5 overflow-x-auto border-b border-line bg-surface-2/70 px-5">
+        {(Object.keys(SEARCH_KINDS) as SearchKind[]).map((k) => (
+          <button key={k} role="tab" aria-selected={kind === k} onClick={() => setKind(k)} className={clsx("relative whitespace-nowrap py-2.5 text-[13px] font-medium transition-colors", kind === k ? "text-accent" : "text-muted hover:text-fg")}>
+            {SEARCH_KINDS[k].label}<span className="tnum ml-1.5 text-xs font-normal text-subtle">{all.filter((x) => kindOf(x) === k).length}</span>
+            {kind === k && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />}
+          </button>
+        ))}
+      </div>
+      <ul>
         {saved.map((s) => (
-          <li key={s.id} className="px-5 py-3">
-            <div className="flex items-center gap-2">
+          // the divider is drawn over the row, not as a border, so every row is the same height
+          <li key={s.id} className="relative [&:not(:first-child)]:before:absolute [&:not(:first-child)]:before:inset-x-0 [&:not(:first-child)]:before:top-0 [&:not(:first-child)]:before:h-px [&:not(:first-child)]:before:bg-line">
+            <div className="flex items-center gap-2 px-5 pb-2 pt-3">
               <BookmarkCheck className="h-4 w-4 shrink-0 text-accent" />
               {editing === s.id ? (
                 <input
@@ -74,7 +86,7 @@ function SavedSearchesSection() {
               <span className="ml-auto flex shrink-0 items-center gap-1">
                 <Tip label="Rename"><Button size="icon-sm" variant="ghost" aria-label={`Rename ${s.name}`} onClick={() => (setDraft(s.name), setEditing(s.id))}><Pencil className="h-3.5 w-3.5" /></Button></Tip>
                 <Tip label={open === s.id ? "Hide what it applies" : "Show what it applies"}><Button size="icon-sm" variant="ghost" aria-pressed={open === s.id} aria-label={`Preview ${s.name}`} onClick={() => setOpen(open === s.id ? null : s.id)}><Eye className="h-3.5 w-3.5" /></Button></Tip>
-                <Tip label="Apply it on the Datasets page"><Button size="sm" onClick={() => nav(`/datasets?${s.qs}`)}>Apply</Button></Tip>
+                <Tip label={`Apply it on the ${SEARCH_KINDS[kind].label} page`}><Button size="sm" onClick={() => nav(`${SEARCH_KINDS[kind].path}?${s.qs}`)}>Apply</Button></Tip>
                 <Tip label="Delete">
                   <Button
                     size="icon-sm"
@@ -89,7 +101,9 @@ function SavedSearchesSection() {
                 </Tip>
               </span>
             </div>
-            {open === s.id && <div className="mt-3 rounded-lg border border-line bg-surface-2/60 p-3"><QueryPreview qs={s.qs} /></div>}
+            {/* what it applies, in one line, on its own tinted band: the name above is what you act on, this is what it holds */}
+            <div className="bg-surface-2/70 px-5 py-2"><SearchSummary qs={s.qs} className="pl-6" /></div>
+            {open === s.id && <div className="m-3 mx-5 rounded-lg border border-line bg-surface p-3"><QueryPreview qs={s.qs} /></div>}
           </li>
         ))}
       </ul>

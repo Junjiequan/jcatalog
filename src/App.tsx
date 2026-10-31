@@ -10,6 +10,8 @@ import DatasetsPage from "@/features/datasets/DatasetsPage";
 import DatasetDetailPage from "@/features/datasets/DatasetDetailPage";
 import { ExperimentsPage, ProposalDetailPage, ProposalsPage } from "@/features/proposals/ProposalsPages";
 import { InstrumentsPage, JobsPage, PublishedPage, SamplesPage } from "@/features/catalog/CatalogPages";
+import SampleDetailPage from "@/features/catalog/SampleDetailPage";
+import PublishedDetailPage from "@/features/catalog/PublishedDetailPage";
 import SettingsPage from "@/features/settings/SettingsPage";
 
 function NotFound() {
@@ -44,8 +46,10 @@ export default function App() {
           <Route path="experiments" element={<ExperimentsPage />} />
           <Route path="experiments/:id" element={<ProposalDetailPage />} />
           <Route path="samples" element={<SamplesPage />} />
+          <Route path="samples/:id" element={<SampleDetailPage />} />
           <Route path="instruments" element={<InstrumentsPage />} />
           <Route path="published" element={<PublishedPage />} />
+          <Route path="published/:id" element={<PublishedDetailPage />} />
           <Route path="jobs" element={<JobsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />

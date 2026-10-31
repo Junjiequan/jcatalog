@@ -2,34 +2,9 @@ import { useState } from "react";
 import clsx from "clsx";
 import { CalendarDays } from "lucide-react";
 import { toISODate } from "@/lib/format";
+import { MONTHS, PRESETS, daysAgo, indexOf, monthLabel, monthStart, rangeLabel } from "@/lib/dateRange";
 import { P } from "./shared";
 import { Section } from "./Section";
-
-const MONTHS = 36;
-
-const monthStart = (i: number) => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() - (MONTHS - i), 1);
-};
-
-const monthLabel = (i: number) => monthStart(i).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-
-const indexOf = (iso?: string) => {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  const m0 = monthStart(0);
-  const i = (d.getFullYear() - m0.getFullYear()) * 12 + (d.getMonth() - m0.getMonth()) + (d.getDate() > 15 ? 1 : 0);
-  return Math.max(0, Math.min(MONTHS, i));
-};
-
-const PRESETS = [
-  { label: "7 days", days: 7 },
-  { label: "30 days", days: 30 },
-  { label: "3 months", days: 90 },
-  { label: "12 months", days: 365 },
-];
-
-const daysAgo = (n: number) => toISODate(new Date(Date.now() - n * 86400000));
 
 function RangeSlider({ min, max, step = 1, value: [a, b], onChange }: { min: number; max: number; step?: number; value: [number, number]; onChange: (v: [number, number]) => void }) {
   const pct = (v: number) => ((v - min) / (max - min || 1)) * 100;
@@ -50,7 +25,7 @@ export function Timeline({ query, update, entry }: P) {
   const preset = PRESETS.find((p) => query.from === daysAgo(p.days) && !query.to);
   const setRange = ([x, y]: [number, number]) =>
     update({ from: x > 0 ? toISODate(monthStart(x)) : undefined, to: y < MONTHS ? toISODate(new Date(monthStart(y).getTime() - 86400000)) : undefined });
-  const label = !query.from && !query.to ? "Any time" : preset ? `Last ${preset.label}` : `${query.from ? monthLabel(a) : "…"} – ${query.to ? monthLabel(b) : "now"}`;
+  const label = rangeLabel(query.from, query.to);
   return (
     <Section sid="created" title={entry.label} badge={query.from || query.to ? 1 : 0} defaultOpen={entry.open} onClear={() => update({ from: undefined, to: undefined })}>
       <div className="mb-1 flex items-center justify-between text-xs">

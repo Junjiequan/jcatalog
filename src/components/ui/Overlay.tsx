@@ -155,7 +155,7 @@ export function ClipRow({ children, full, title = "Full details", className }: {
 
 const SIZES = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl", "2xl": "max-w-6xl" };
 
-export function Modal({ open, onOpenChange, title, description, children, footer, size = "md", bare }: {
+export function Modal({ open, onOpenChange, title, description, children, footer, size = "md", bare, noAutoFocus }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: string;
@@ -164,13 +164,16 @@ export function Modal({ open, onOpenChange, title, description, children, footer
   footer?: ReactNode;
   size?: keyof typeof SIZES;
   bare?: boolean;
+  // do not move focus into the first field when it opens (a dialog that is mostly to read)
+  noAutoFocus?: boolean;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-[2px] data-[state=open]:animate-fade-in" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/45 data-[state=open]:animate-fade-in" />
         <Dialog.Content
           aria-describedby={undefined}
+          onOpenAutoFocus={noAutoFocus ? (e) => e.preventDefault() : undefined}
           className={clsx("fixed inset-0 z-50 m-auto flex h-fit max-h-[min(90dvh,860px)] w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-pop outline-hidden data-[state=open]:animate-scale-in", SIZES[size])}
         >
           {bare ? (
@@ -192,7 +195,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
   );
 }
 
-export function Sheet({ open, onOpenChange, title, side = "right", width = "sm:w-[440px]", children, footer, noOverlay }: {
+export function Sheet({ open, onOpenChange, title, side = "right", width = "sm:w-[440px]", children, footer, noOverlay, actions }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: string;
@@ -201,6 +204,8 @@ export function Sheet({ open, onOpenChange, title, side = "right", width = "sm:w
   children: ReactNode;
   footer?: ReactNode;
   noOverlay?: boolean;
+  // beside the close button in the header (previous / next, say)
+  actions?: ReactNode;
 }) {
   const pos = {
     right: "right-0 top-0 h-dvh w-full border-l animate-slide-in-right " + width,
@@ -214,7 +219,10 @@ export function Sheet({ open, onOpenChange, title, side = "right", width = "sm:w
         <Dialog.Content aria-describedby={undefined} className={clsx("fixed z-50 flex flex-col border-line bg-surface shadow-pop outline-hidden", pos)}>
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <Dialog.Title className="text-sm font-semibold">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-subtle hover:bg-surface-2 hover:text-fg"><X className="h-4 w-4" /></Dialog.Close>
+            <div className="flex items-center gap-0.5">
+              {actions}
+              <Dialog.Close className="rounded-lg p-1.5 text-subtle hover:bg-surface-2 hover:text-fg" aria-label="Close preview"><X className="h-4 w-4" /></Dialog.Close>
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
           {footer && <div className="border-t border-line p-3">{footer}</div>}

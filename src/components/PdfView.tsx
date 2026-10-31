@@ -47,7 +47,7 @@ export default function PdfView({ bytes }: { bytes: Uint8Array }) {
   const pageWidth = Math.max(120, Math.floor((width - 32) * zoom));
   return (
     <div ref={box} className="bg-surface-2">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/90 px-3 py-1.5 text-xs text-muted backdrop-blur-sm">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-3 py-1.5 text-xs text-muted">
         <span>{doc ? `${doc.numPages} ${doc.numPages === 1 ? "page" : "pages"}` : "Loading…"}</span>
         <span className="flex items-center gap-1">
           <Button size="icon-sm" variant="ghost" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}><Minus className="h-4 w-4" /></Button>

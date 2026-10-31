@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {Dataset, storageOf} from "@/types";
+import { proposalKind, storageOf, type Dataset, type Proposal, type PublishedData, type Sample } from "@/types";
 
 export type SelKind = "dataset" | "proposal" | "experiment" | "sample" | "instrument" | "published" | "job";
 
@@ -30,6 +30,11 @@ export const KIND_LABEL: Record<SelKind, [string, string]> = {
 export const KIND_ORDER: SelKind[] = ["dataset", "proposal", "experiment", "sample", "instrument", "published", "job"];
 
 export const datasetItem = (d: Dataset): SelItem => ({ kind: "dataset", id: d.pid, name: d.datasetName, sub: d.pid, link: `/datasets/${encodeURIComponent(d.pid)}`, size: d.size, files: d.numberOfFiles, archived: storageOf(d) === "archived" });
+
+// how a sample or a proposal/experiment goes into the selection, wherever it is picked
+export const sampleItem = (s: Sample): SelItem => ({ kind: "sample", id: `sample:${s.sampleId}`, name: s.sampleName, sub: s.formula || s.sampleId, link: `/samples/${encodeURIComponent(s.sampleId)}` });
+export const publishedItem = (p: PublishedData): SelItem => ({ kind: "published", id: `doi:${p.doi}`, name: p.title, sub: p.doi, link: `/published/${encodeURIComponent(p.pid)}` });
+export const proposalItem = (p: Proposal): SelItem => ({ kind: proposalKind(p), id: `proposal:${p.proposalId}`, name: p.title, sub: p.proposalId, link: `${p.parentProposalId ? "/experiments" : "/proposals"}/${p.proposalId}` });
 
 // a pick order that never repeats, even for two picks in the same millisecond
 let clock = Date.now();

@@ -17,13 +17,13 @@ describe("samples", () => {
     const { user } = await renderApp("/samples");
     const box = await screen.findByPlaceholderText(/Search samples/);
     await user.type(box, "zzzznothing");
-    expect(await screen.findByText(/No samples|Nothing/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^No samples match/ })).toBeInTheDocument();
   });
 
-  it("each sample leads to its datasets", async () => {
+  it("each sample opens its own page", async () => {
     await renderApp("/samples");
-    const links = await screen.findAllByRole("link", { name: /Browse data/ });
-    expect(links[0].getAttribute("href")).toMatch(/^\/datasets\?scope=all&q=/);
+    const links = await screen.findAllByRole("link", { name: /Open sample/ });
+    expect(links[0].getAttribute("href")).toMatch(/^\/samples\/[^/]+$/);
   });
 });
 
@@ -60,7 +60,7 @@ describe("published data", () => {
   it("says when a search matches nothing", async () => {
     const { user } = await renderApp("/published");
     await user.type(await screen.findByPlaceholderText(/Search published data/), "zzzznothing");
-    expect(await screen.findByText(/No (published|results|matches)|Nothing/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^No published data match/ })).toBeInTheDocument();
   });
 });
 

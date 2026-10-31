@@ -1,28 +1,26 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canCreateDatasets, useRole } from "@/lib/permissions";
 import { useNavigate, useSearchParams } from "react-router";
 import clsx from "clsx";
-import { Bookmark, ChevronDown, ChevronsLeft, ChevronsRight, Columns3, LayoutGrid, Plus, Rows3, SlidersHorizontal, SearchX, Sparkles, X, ArrowUpDown, Database } from "lucide-react";
+import { Bookmark, ChevronDown, Layers, Columns3, LayoutGrid, Plus, Rows3, SearchX, Sparkles, ArrowUpDown, Database } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Menu, MenuCheck, MenuLabel, MenuRadio, MenuSep, Pop, Sheet, Tip } from "@/components/ui/Overlay";
-import { EmptyState, ErrorState, Kbd, Pager, Segmented, TECH_HUE } from "@/components/ui/Primitives";
+import { Menu, MenuCheck, MenuLabel, MenuRadio, MenuSep, Pop, Sheet } from "@/components/ui/Overlay";
+import { EmptyState, ErrorState, Kbd, Pager, Segmented } from "@/components/ui/Primitives";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { InstrumentThumb } from "@/components/Thumb";
+import { AppliedFilters, FilterShell, FilterToggle } from "@/components/FilterShell";
 import { api } from "@/api";
 import { bus } from "@/lib/bus";
-import { useDebounced, useElementWidth, useHotkeys, useMediaQuery } from "@/hooks/hooks";
+import { useDebounced, useElementWidth, useHotkeys, useMediaQuery, yieldSelectionTo } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { useLazy } from "@/hooks/useLazy";
 import { fmtNum } from "@/lib/format";
 import { DEFAULT_QUERY, activeFilterCount, datasetLink, filterKey, parseQuery, serializeQuery } from "@/lib/query";
 import { useSelection } from "@/store/selection";
 import { toast } from "@/store/toasts";
-import { useUI, type ColumnKey } from "@/store/ui";
-import { type DatasetQuery, type FilterGroup, type Scope, type SortKey } from "@/types";
+import { kindOf, useUI, type ColumnKey } from "@/store/ui";
+import { type DatasetQuery, type Scope, type SortKey } from "@/types";
 import { DatasetGrid, DatasetTable, GridSkeleton, TableSkeleton } from "./DatasetViews";
-import { FilterPanel } from "./FilterPanel";
 import { PeekContent } from "./PeekPanel";
-import { GROUP_ICON, buildChips, summarize } from "./chips";
 
 // One group per filter, each value its own pill. Every connector is a switch: between values of a multi-valued
 // group (technique, keyword) and between groups. "and" binds tighter than "or", as in a or (b and c).
@@ -36,57 +34,12 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 ];
 const COLUMN_LABELS: Record<ColumnKey, string> = { runNumber: "Run number", keywords: "Keywords", instrument: "Instrument", technique: "Technique", proposal: "Proposal", sample: "Sample", type: "Type", created: "Created", size: "Size", files: "Files", owner: "Owner" };
 
-// which filter section edits each applied group
-const SECTION_OF: Record<FilterGroup, string> = { types: "data", storage: "data", date: "created", conds: "measurements", instruments: "instruments", techniques: "techniques", proposals: "proposals", keywords: "keywords" };
-
-// One applied value: technique pills carry their hue, instrument pills a thumbnail, the rest the accent
-function Pill({ group, id, label, onRemove, onEdit }: { group: FilterGroup; id: string; label: string; onRemove: () => void; onEdit: () => void }) {
-  const hue = group === "techniques" ? TECH_HUE[id] : undefined;
-  const inst = group === "instruments" ? api.options.instruments().find((i) => i.pid === id) : undefined;
-  return (
-    <span
-      style={hue ? ({ "--t": hue[0], "--td": hue[1] } as React.CSSProperties) : undefined}
-      className="inline-flex h-6 max-w-[260px] items-center rounded-full border border-line bg-surface-2 pr-0.5 text-xs font-medium text-fg"
-      title={label}
-    >
-      <Tip label="Edit in the filter panel">
-        <button onClick={onEdit} className={clsx("inline-flex h-full min-w-0 items-center gap-1 rounded-l-full", inst ? "pl-0.5" : "pl-2")}>
-          {hue && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[rgb(var(--t))] dark:bg-[rgb(var(--td))]" />}
-          {inst && <InstrumentThumb i={inst} className="h-5 w-8 shrink-0 rounded-sm" />}
-          <span className="truncate">{label}</span>
-        </button>
-      </Tip>
-      <button onClick={onRemove} aria-label={`Remove ${label}`} className="rounded-full p-0.5 text-subtle hover:bg-fg/10 hover:text-fg"><X className="h-3 w-3" /></button>
-    </span>
-  );
-}
-
-// A clickable and/or between two pills or two groups; `strong` is the between-group one
-function Connector({ op, onFlip, strong }: { op: "or" | "and"; onFlip: () => void; strong?: boolean }) {
-  return (
-    <Tip label={`Click for "${op === "or" ? "and" : "or"}"`}>
-      <button
-        onClick={onFlip}
-        aria-label={`${op}, click to switch`}
-        className={clsx(
-          // accent-tinted so the switch reads as a control, not as another grey tag
-          "shrink-0 whitespace-nowrap font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-fg",
-          op === "and" ? "border-accent/50 bg-surface" : "border-accent/50 bg-accent-soft",
-          strong ? "h-7 w-[3.25rem] rounded-md border text-[11px] uppercase tracking-wider shadow-xs" : "h-5 rounded-md border px-1.5 text-[10px] uppercase tracking-wider shadow-xs",
-        )}
-      >
-        {op}
-      </button>
-    </Tip>
-  );
-}
-
 function SaveSearch({ qs }: { qs: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   // "new", or the id of a saved search to overwrite with the current query
   const [target, setTarget] = useState("new");
-  const saved = useUI((s) => s.savedSearches);
+  const saved = useUI((s) => s.savedSearches).filter((s) => kindOf(s) === "datasets");
   const save = () => {
     if (!name.trim()) return;
     if (target === "new") useUI.getState().saveSearch(name.trim(), qs);
@@ -134,16 +87,16 @@ export default function DatasetsPage() {
   const density = useUI((s) => s.density);
   const columns = useUI((s) => s.columns);
   const filtersOpen = useUI((s) => s.filtersOpen);
-  const filtersWidth = useUI((s) => s.filtersWidth);
   const tipsDismissed = useUI((s) => s.tipsDismissed);
-  const mobileFilters = useUI((s) => s.mobileFiltersOpen);
   const set = useUI((s) => s.set);
   const selCount = useSelection((s) => Object.keys(s.items).length);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const isXL = useMediaQuery("(min-width: 1280px)");
   const is2XL = useMediaQuery("(min-width: 1536px)");
-  const inlinePeek = isXL && (!filtersOpen || is2XL);
-  const [resultsRef, resultsWidth] = useElementWidth<HTMLDivElement>();
+  const selectionOpen = useUI((s) => s.selectionOpen);
+  // the selection panel and the preview share the dock unless the screen is wide enough for both
+  const covered = isXL && !is2XL && selectionOpen;
+  const inlinePeek = isXL && !covered && (!filtersOpen || is2XL);
+  const [resultsRef] = useElementWidth<HTMLDivElement>();
 
   const listKey = serializeQuery(query).toString();
   const { data, error, loading, reload } = useResource(["datasets", listKey], () => api.datasets.list(query));
@@ -175,13 +128,15 @@ export default function DatasetsPage() {
     [setSp],
   );
   const setPeek = useCallback(
-    (pid: string | null) =>
+    (pid: string | null) => {
+      yieldSelectionTo(pid);
       setSp((prev) => {
         const n = new URLSearchParams(prev);
         if (pid) n.set("peek", pid);
         else n.delete("peek");
         return n;
-      }, { replace: true }),
+      }, { replace: true });
+    },
     [setSp],
   );
 
@@ -237,93 +192,29 @@ export default function DatasetsPage() {
       if (peek && (tag === "BODY" || tag === "TR")) nav(datasetLink(peek));
     },
     Escape: () => peek && !document.querySelector("[role=dialog]") && setPeek(null),
-    f: () => (isDesktop ? set({ filtersOpen: !filtersOpen }) : set({ mobileFiltersOpen: true })),
   });
 
-  const chips = useMemo(() => buildChips(query, update), [query, update]);
-  const builderOpen = useUI((s) => s.builderOpen);
-  const setBuilderOpen = (v: boolean) => useUI.getState().set({ builderOpen: v });
   // the expression in words, for the collapsed bar
-  const summary = summarize(chips, query.orBefore);
   // a keyword chip anywhere in the results adds that keyword as a filter
   const onInstrument = (id: string) => update({ instruments: query.instruments.includes(id) ? query.instruments : [...query.instruments, id] });
   const onTechnique = (t: string) => update({ techniques: query.techniques.includes(t) ? query.techniques : [...query.techniques, t] });
   const onKeyword = (k: string) => update({ keywords: query.keywords.includes(k) ? query.keywords : [...query.keywords, k] });
-  const nFilters = activeFilterCount(query) - (query.q ? 1 : 0);
-  // open the panel (or the sheet on a phone) and bring the section that edits this group into view
-  // on a desktop the toggle sits at the very start of the toolbar, against the panel it opens and closes
-  const filtersOn = isDesktop && filtersOpen;
-  const filtersBtn = (
-    <Tip label={filtersOn ? "Hide filters" : "Show filters"} kbd="F">
-      <button
-        aria-pressed={filtersOn}
-        onClick={() => (isDesktop ? set({ filtersOpen: !filtersOpen }) : set({ mobileFiltersOpen: true }))}
-        // open: a solid blue tab docked onto the panel's edge, so it reads as part of the panel (click to fold it away);
-        // closed: a grey pill with an arrow pointing out (click to open it)
-        className={clsx(
-          "inline-flex h-9 shrink-0 items-center gap-2 text-sm font-medium transition-all",
-          filtersOn ? "-ml-4 rounded-l-none rounded-r-xl bg-accent pl-4 pr-3 text-accent-fg shadow-[0_2px_8px_-2px_rgb(var(--accent)/0.5)] hover:bg-accent-deep sm:-ml-6 sm:pl-6" : "rounded-lg bg-surface-3/70 px-3 text-fg hover:bg-surface-3",
-        )}
-      >
-        <SlidersHorizontal className="h-4 w-4" strokeWidth={2.2} />
-        <span className="hidden sm:inline">Filters</span>
-        {nFilters > 0 && <span className={clsx("grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-semibold leading-none", filtersOn ? "bg-white/25 text-accent-fg" : "bg-accent text-accent-fg")}>{nFilters}</span>}
-        {isDesktop && (filtersOn ? <ChevronsLeft className="-mr-0.5 h-4 w-4 opacity-90" /> : <ChevronsRight className="-mr-0.5 h-4 w-4 opacity-60" />)}
-      </button>
-    </Tip>
-  );
-  const focusGroup = (g: FilterGroup) => set(isDesktop ? { filtersOpen: true, focusSection: SECTION_OF[g] } : { mobileFiltersOpen: true, focusSection: SECTION_OF[g] });
   const hasFilters = activeFilterCount(query) > 0;
-  const hasChips = chips.length > 0;
   const clearAll = () => update({ q: "", types: [], instruments: [], techniques: [], proposals: [], keywords: [], storage: [], from: undefined, to: undefined, conds: [], and: {}, orBefore: [] });
   const onSort = (k: SortKey) => update(query.sort === k ? { dir: query.dir === "asc" ? "desc" : "asc" } : { sort: k, dir: k === "name" || k === "instrumentName" ? "asc" : "desc" });
   const applySaved = (qs: string) => setSp(new URLSearchParams(qs), { replace: true });
 
-  const filterPanel = <FilterPanel query={query} update={update} onApplySaved={applySaved} />;
   const from = items.length ? (query.page - 1) * query.pageSize + 1 : 0;
   const to = from + items.length - 1;
 
   return (
-    <div className="flex h-full min-h-0 overflow-x-clip">
-      {isDesktop && filtersOpen && (
-        <aside className="relative shrink-0 border-r border-line-strong bg-surface shadow-[inset_0_3px_0_rgb(var(--accent))]" style={{ width: filtersWidth }}>
-          <div className="h-full overflow-y-auto">
-            <FilterPanel query={query} update={update} onApplySaved={applySaved} onHide={() => set({ filtersOpen: false })} />
-          </div>
-          {/* drag the edge to make the panel wider or narrower */}
-          <div tabIndex={0}
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize filters"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              const start = e.clientX;
-              const base = filtersWidth;
-              // no text selection while the pointer sweeps across the page
-              document.body.style.userSelect = "none";
-              document.body.style.cursor = "col-resize";
-              const move = (ev: PointerEvent) => set({ filtersWidth: Math.max(240, Math.min(520, base + ev.clientX - start)) });
-              const up = () => {
-                document.body.style.userSelect = "";
-                document.body.style.cursor = "";
-                window.removeEventListener("pointermove", move);
-                window.removeEventListener("pointerup", up);
-              };
-              window.addEventListener("pointermove", move);
-              window.addEventListener("pointerup", up);
-            }}
-            onDoubleClick={() => set({ filtersWidth: 296 })}
-            className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize hover:bg-accent/30 active:bg-accent/40"
-          />
-        </aside>
-      )}
-
+    <FilterShell query={query} update={update} onApplySaved={applySaved} showLabel={totalLabel ? `Show ${totalLabel} results` : undefined}>
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="shrink-0 space-y-3 border-b border-line bg-surface px-4 pb-3 pt-4 sm:px-6">
           <h1 className="text-xl font-semibold tracking-tight">Datasets</h1>
 
           <div className="flex flex-wrap items-center gap-3">
-            {isDesktop && filtersBtn}
+            <FilterToggle place="start" />
             <SearchInput value={text} onChange={setText} placeholder="Search by name, PID, sample, proposal or keyword…" />
             <Segmented
               stretch
@@ -336,8 +227,26 @@ export default function DatasetsPage() {
                 { value: "all", label: "All" },
               ]}
             />
+            {/* raw or derived: a different kind of filter from the scope, so a compact menu, not a second segmented row */}
+            <Menu
+              tip="Raw or derived data"
+              trigger={
+                <Button className={query.types.length === 1 ? "border-accent/50 bg-accent-soft text-accent" : ""}>
+                  <Layers className="h-4 w-4" />
+                  {query.types.length === 1 ? (query.types[0] === "raw" ? "Raw" : "Derived") : "Type"}
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </Button>
+              }
+            >
+              <MenuLabel>Type</MenuLabel>
+              <MenuRadio
+                value={query.types.length === 1 ? query.types[0] : "any"}
+                onValueChange={(v) => update({ types: v === "any" ? [] : [v as DatasetQuery["types"][number]] })}
+                options={[{ value: "any", label: "Any" }, { value: "raw", label: "Raw" }, { value: "derived", label: "Derived" }]}
+              />
+            </Menu>
             <div className="ml-auto flex items-center gap-1.5">
-              {!isDesktop && filtersBtn}
+              <FilterToggle place="end" />
               <Menu trigger={<Button><ArrowUpDown className="h-4 w-4" /><span className="hidden md:inline">Sort</span></Button>}>
                 <MenuLabel>Sort by</MenuLabel>
                 <MenuRadio value={query.sort} onValueChange={(v) => update({ sort: v as SortKey })} options={SORT_OPTIONS} />
@@ -357,62 +266,7 @@ export default function DatasetsPage() {
             </div>
           </div>
 
-          {hasChips && (
-            <div className="rounded-lg border border-line bg-surface-2/50">
-              {/* one line by default: the whole expression in words, with save and clear beside it; unfold to edit */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 pl-1.5 pr-2.5">
-                <button onClick={() => setBuilderOpen(!builderOpen)} aria-expanded={builderOpen} className="flex h-7 min-w-[220px] flex-1 items-center gap-1.5 rounded-md px-1 text-left hover:bg-surface-2">
-                  <ChevronDown className={clsx("h-4 w-4 shrink-0 text-subtle transition-transform", !builderOpen && "-rotate-90")} />
-                  <span className="truncate text-xs text-fg" title={summary}>{summary}</span>
-                </button>
-                <span className="ml-auto flex items-center gap-2">
-                  <SaveSearch qs={serializeQuery({ ...query, page: 1 }).toString()} />
-                  <button onClick={clearAll} className="shrink-0 text-xs font-medium text-muted hover:text-fg">Clear all</button>
-                </span>
-              </div>
-              {builderOpen && (
-                <div className="grid grid-cols-[3.25rem_minmax(0,1fr)] items-stretch gap-x-2 gap-y-1.5 border-t border-line px-2.5 py-2.5 animate-fade-in">
-                  {chips.map((c, i) => (
-                    <Fragment key={c.id}>
-                      <div className="flex min-h-8 items-center justify-end self-stretch">
-                        {i === 0 && <span className="w-[3.25rem] text-center text-[11px] font-medium uppercase tracking-wider text-subtle">Search</span>}
-                        {i > 0 && (
-                          <Connector
-                            op={query.orBefore.includes(c.id) ? "or" : "and"}
-                            strong
-                            onFlip={() => update({ orBefore: query.orBefore.includes(c.id) ? query.orBefore.filter((g) => g !== c.id) : [...query.orBefore, c.id] })}
-                          />
-                        )}
-                      </div>
-                      <span className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-1 gap-y-1 self-start rounded-lg border border-line bg-surface py-0.5 pl-2 pr-1">
-                        <Tip label={`Edit in the filter panel`}>
-                          <button
-                            onClick={() => focusGroup(c.id)}
-                            className="mr-1 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-muted"
-                          >
-                            {(() => { const I = GROUP_ICON[c.id]; return <I className="h-3.5 w-3.5 text-subtle" strokeWidth={1.8} />; })()}{c.group}
-                          </button>
-                        </Tip>
-                        {c.values.map((v, j) => (
-                          <span key={v.id} className="inline-flex items-center gap-1">
-                            {j > 0 &&
-                              (c.flipAt ? (
-                                <Connector op={c.opAt!(j)} onFlip={() => c.flipAt!(j)} />
-                              ) : (
-                                <Tip label="Fixed, can't be changed">
-                                  <span className="shrink-0 cursor-help whitespace-nowrap text-[11px] text-subtle">{c.id === "conds" ? "and" : "or"}</span>
-                                </Tip>
-                              ))}
-                            <Pill group={c.id} id={v.id} label={v.label} onRemove={v.remove} onEdit={() => focusGroup(c.id)} />
-                          </span>
-                        ))}
-                      </span>
-                    </Fragment>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <AppliedFilters actions={<SaveSearch qs={serializeQuery({ ...query, page: 1 }).toString()} />} />
         </div>
 
         <div ref={resultsRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-clip bg-surface">
@@ -443,7 +297,7 @@ export default function DatasetsPage() {
           ) : (
             <div className={clsx("transition-opacity duration-150", loading && "opacity-60")}>
               {view === "table" ? (
-                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} onOpen={(pid) => nav(datasetLink(pid))} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} width={resultsWidth} />
+                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} onOpen={(pid) => nav(datasetLink(pid))} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} />
               ) : (
                 <DatasetGrid onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} onOpen={(pid) => nav(datasetLink(pid))} hasMore={hasMore} onNext={() => update({ page: query.page + 1 })} />
               )}
@@ -473,23 +327,12 @@ export default function DatasetsPage() {
           <PeekContent key={peek} pid={peek} onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} onClose={() => setPeek(null)} onPrev={() => move(-1)} onNext={() => move(1)} />
         </aside>
       )}
-      {!inlinePeek && (
+      {!inlinePeek && !covered && (
         <Sheet open={!!peek} onOpenChange={(o) => !o && setPeek(null)} title="Preview" width="sm:w-[420px]">
           {peek && <PeekContent pid={peek} onKeyword={(k) => pickAndClose({ keywords: query.keywords.includes(k) ? query.keywords : [...query.keywords, k] })} onInstrument={(i) => pickAndClose({ instruments: query.instruments.includes(i) ? query.instruments : [...query.instruments, i] })} onTechnique={(t) => pickAndClose({ techniques: query.techniques.includes(t) ? query.techniques : [...query.techniques, t] })} onClose={() => setPeek(null)} embedded />}
         </Sheet>
       )}
-      {!isDesktop && (
-        <Sheet
-          open={mobileFilters}
-          onOpenChange={(o) => set({ mobileFiltersOpen: o })}
-          side="left"
-          title="Filters"
-          footer={<Button variant="primary" className="w-full" onClick={() => set({ mobileFiltersOpen: false })}>{totalLabel ? `Show ${totalLabel} results` : "Show results"}</Button>}
-        >
-          {filterPanel}
-        </Sheet>
-      )}
-    </div>
+    </FilterShell>
   );
 }
 

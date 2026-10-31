@@ -1,8 +1,9 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, LayoutGrid, Rows3 } from "lucide-react";
 import { type Density, type ListView, useUI } from "@/store/ui";
 import { useSelection } from "@/store/selection";
+import { useElementWidth, useMediaQuery } from "@/hooks/hooks";
 import { Button } from "./Button";
 import { Menu, MenuCheck, MenuLabel, MenuRadio, MenuSep } from "./Overlay";
 import { Segmented } from "./navigation";
@@ -18,8 +19,42 @@ export interface Column<T> {
   // a column with no visible title (a thumbnail), and one that hugs its content
   hideLabel?: boolean;
   narrow?: boolean;
+  // When the table is too narrow for all its columns, the least important are dropped (never scrolled sideways).
+  // `width` is the room the column needs (estimated); `rank` how long it stays: 0 goes last. Left out, a column
+  // is estimated at 120px and goes from the right.
+  fit?: { width?: number; rank?: number };
   // `active` is true for the row currently open in a side panel
   render: (row: T, active: boolean) => ReactNode;
+}
+
+// room for what is always there: the tick box, the open arrow, the first column (the row's name) and any thumbnail
+const ROOM = { select: 40, trailing: 36, first: 280, narrow: 72, other: 120 };
+
+// The columns that fit in `width` pixels, in their order. The first column and narrow ones (a thumbnail) always stay.
+// Before the table has been measured nothing is dropped.
+export function fitColumns<T>(columns: Column<T>[], width: number, extras: { selection?: boolean; trailing?: boolean } = {}): Column<T>[] {
+  if (!width) return columns;
+  const first = columns.findIndex((c) => !c.narrow);
+  let budget = width - (extras.selection ? ROOM.select : 0) - (extras.trailing ? ROOM.trailing : 0);
+  const stays = new Set<string>();
+  columns.forEach((c, i) => {
+    if (c.narrow || i === first) {
+      stays.add(c.key);
+      budget -= c.narrow ? ROOM.narrow : ROOM.first;
+    }
+  });
+  const rest = columns
+    .map((c, i) => ({ c, order: c.fit?.rank ?? i }))
+    .filter(({ c }) => !stays.has(c.key))
+    .sort((a, b) => a.order - b.order);
+  for (const { c } of rest) {
+    const need = c.fit?.width ?? ROOM.other;
+    if (budget >= need) {
+      stays.add(c.key);
+      budget -= need;
+    }
+  }
+  return columns.filter((c) => stays.has(c.key));
 }
 
 // Row selection for a Table: which rows are ticked, and how to flip one or the whole page
@@ -73,7 +108,7 @@ export function CardCheck({ checked, onChange, label, className }: { checked: bo
     <label
       onClick={(e) => e.stopPropagation()}
       className={clsx(
-        "absolute z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-line bg-surface/90 shadow-xs backdrop-blur-sm transition-opacity pointer-coarse:opacity-100",
+        "absolute z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-line bg-surface shadow-xs transition-opacity pointer-coarse:opacity-100",
         checked || any ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover:opacity-100",
         className,
       )}
@@ -100,7 +135,7 @@ export function SelectCheck({ checked, onChange, label, className }: { checked: 
 // The one table every page shares, Datasets included: flat, white, edge to edge. Optional: a selection column,
 // sortable headers, an "active" row (open in a side panel) and a trailing affordance. On phones rows stack into
 // label/value lines unless `phoneStack` is turned off.
-export function Table<T>({ columns, rows, rowKey, onRow, onRowDoubleClick, density = "comfortable", stickyHeader, className, selection, sort, active, trailing, phoneStack = true, phoneSummary, rowAttrs }: {
+export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClick, density = "comfortable", stickyHeader, className, selection, sort, active, trailing, phoneStack = true, phoneSummary, rowAttrs }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
@@ -118,7 +153,15 @@ export function Table<T>({ columns, rows, rowKey, onRow, onRowDoubleClick, densi
   phoneSummary?: (row: T) => ReactNode;
   rowAttrs?: (row: T) => Record<string, string>;
 }) {
+  const [box, width] = useElementWidth<HTMLDivElement>();
+  // on a phone the table is a stack of cards, not columns, so there is nothing to drop
+  const phone = useMediaQuery("(max-width: 639px)");
+  const columns = useMemo(() => (phone ? wanted : fitColumns(wanted, width, { selection: !!selection, trailing: !!trailing })), [wanted, width, phone, selection, trailing]);
+  // the row's name takes the space that is left (width 100%, max-width 0 lets a table cell shrink below its text) and is cut with "…"
+  const nameCol = columns.findIndex((c) => !c.narrow);
   const pad = density === "compact" ? "px-3 py-1.5" : "px-3 py-3";
+  // every row is as tall as every other: a cell never wraps (long text ends in "…", the full text on hover)
+  const rowH = density === "compact" ? "sm:h-10" : "sm:h-[3.75rem]";
   const padY = density === "compact" ? "py-1.5" : "py-3";
   const allSelected = !!selection && rows.length > 0 && rows.every((r) => selection.isSelected(r));
   const someSelected = !!selection && rows.some((r) => selection.isSelected(r));
@@ -135,7 +178,7 @@ export function Table<T>({ columns, rows, rowKey, onRow, onRowDoubleClick, densi
     );
   };
   return (
-    <div data-band className={clsx(!stickyHeader && "overflow-x-auto", "bg-surface", className)}>
+    <div ref={box} data-band className={clsx(!stickyHeader && "overflow-x-auto overflow-y-hidden", "bg-surface", className)}>
       <table className={clsx("w-full border-separate border-spacing-0 text-[13px]", phoneStack && "max-sm:block")}>
         <thead className={clsx(phoneStack && !phoneSummary && "max-sm:hidden", phoneStack && phoneSummary && "max-sm:block")}>
           <tr className={clsx("text-left text-[11px] font-semibold uppercase tracking-wider text-subtle", phoneStack && phoneSummary && "max-sm:flex max-sm:items-center max-sm:gap-2 max-sm:px-4 max-sm:py-2.5")}>
@@ -181,11 +224,13 @@ export function Table<T>({ columns, rows, rowKey, onRow, onRowDoubleClick, densi
                     key={c.key}
                     data-label={c.label}
                     className={clsx(
-                      "border-b border-line align-middle group-last:border-b-0 last:pr-4 sm:last:pr-6",
+                      "overflow-hidden whitespace-nowrap border-b border-line align-middle group-last:border-b-0 last:pr-4 sm:last:pr-6",
+                      rowH,
                       c.narrow ? clsx("pl-2 pr-1", padY) : pad,
                       c.right && "text-right",
                       c.center && "text-center",
                       !selection && i === 0 && on && "shadow-[inset_3px_0_0_rgb(var(--accent))]",
+                      i === nameCol && "sm:w-[20rem] sm:min-w-[14rem] sm:max-w-[20rem]",
                       c.className,
                       phoneStack && "max-sm:border-0 max-sm:px-0 max-sm:py-0.5",
                       phoneStack && phoneSummary && (i > 0 ? "max-sm:hidden!" : "max-sm:col-start-2"),

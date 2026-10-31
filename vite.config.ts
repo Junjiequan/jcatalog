@@ -31,8 +31,11 @@ export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
   plugins: [react(), tailwindcss(), runtimeConfig()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  // polling when running in a container, where file events from a bind mount do not arrive
-  server: { port: 4500, watch: process.env.CHOKIDAR_USEPOLLING === "true" ? { usePolling: true, interval: 300 } : undefined },
+  // in a container file events from a bind mount do not arrive, so it polls: once a second, and not over build output
+  server: {
+    port: 4500,
+    watch: { ignored: ["**/coverage/**", "**/dist/**"], ...(process.env.CHOKIDAR_USEPOLLING === "true" ? { usePolling: true, interval: 1000 } : {}) },
+  },
   // fast: happy-dom instead of a full browser, and only the tests next to the code
   test: {
     environment: "happy-dom",

@@ -1,8 +1,9 @@
 import { proposalLink } from "@/lib/query";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Archive, ArrowRight, Check, ChevronDown, ChevronUp, Clock, FileText, FlaskConical, HardDrive, Plus, X, type LucideIcon } from "lucide-react";
+import { Archive, ArrowRight, Check, ChevronDown, ChevronUp, Clock, FileText, FlaskConical, HardDrive, Plus, X } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
+import { PeekFact } from "@/components/PeekSheet";
 import { KeywordChips } from "@/components/ui/Primitives";
 import { InstrumentChips, TechniqueChips } from "@/components/InstrumentChips";
 import { Button } from "@/components/ui/Button";
@@ -63,15 +64,6 @@ export function RetrievalBanner({ d, onRequested }: { d: Dataset; onRequested?: 
   );
 }
 
-function Fact({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
-  return (
-    <li title={label} className="flex items-start gap-2.5">
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
-    </li>
-  );
-}
-
 export function PeekContent({ pid, onClose, onPrev, onNext, embedded, onKeyword, onInstrument, onTechnique }: { pid: string; onClose: () => void; onPrev?: () => void; onNext?: () => void; embedded?: boolean; onKeyword?: (k: string) => void; onInstrument?: (id: string) => void; onTechnique?: (name: string) => void }) {
   const nav = useNavigate();
   const { data: d, error, reload } = useResource(["dataset", pid], () => api.datasets.get(pid));
@@ -124,10 +116,10 @@ export function PeekContent({ pid, onClose, onPrev, onNext, embedded, onKeyword,
             <p className="line-clamp-3 text-sm text-muted">{d.description}</p>
             {/* one line per fact, an icon instead of a label column; the run number is left out when the name already carries it */}
             <ul className="space-y-1.5 rounded-lg bg-surface-2 px-3 py-2.5 text-[13px]">
-              <Fact icon={FileText} label="Proposal"><Link to={proposalLink(d.proposalId)} className="text-accent hover:underline">{d.proposalId}</Link><span className="text-muted"> · {d.proposalTitle}</span></Fact>
-              <Fact icon={FlaskConical} label="Sample">{d.sampleName}</Fact>
-              <Fact icon={Clock} label="Created by">{fmtDate(d.creationTime, true)}<span className="text-muted"> · {d.owner}</span></Fact>
-              <Fact icon={HardDrive} label="Size"><span className="tnum">{fmtBytes(d.size)} · {fmtNum(d.numberOfFiles)} files</span></Fact>
+              <PeekFact icon={FileText} label="Proposal"><Link to={proposalLink(d.proposalId)} className="text-accent hover:underline" title={d.proposalTitle}>{d.proposalId}</Link></PeekFact>
+              <PeekFact icon={FlaskConical} label="Sample"><span title={d.sampleName}>{d.sampleName}</span></PeekFact>
+              <PeekFact icon={Clock} label="Created by">{fmtDate(d.creationTime, true)}<span className="text-muted"> · {d.owner}</span></PeekFact>
+              <PeekFact icon={HardDrive} label="Size"><span className="tnum">{fmtBytes(d.size)} · {fmtNum(d.numberOfFiles)} files</span></PeekFact>
             </ul>
             <div>
               <div className="section-title mb-2">Key measurements</div>

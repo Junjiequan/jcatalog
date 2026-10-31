@@ -35,7 +35,7 @@ export function Breadcrumb({ back, trail, current }: { back: () => void; trail: 
 // The tabs of a detail page: sticky under the header, scrolling sideways when they do not fit and never up or down
 export function TabBar<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (id: T) => void }) {
   return (
-    <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas/90 px-4 backdrop-blur-sm sm:-mx-8 sm:px-8">
+    <div className="sticky top-0 z-10 -mx-4 mt-5 border-b border-line bg-canvas px-4 sm:-mx-8 sm:px-8">
       <div role="tablist" className="flex gap-1 overflow-x-auto overflow-y-hidden overscroll-y-none">
         {tabs.map((t) => (
           <button key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)} className={clsx("relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-medium transition-colors", value === t.id ? "text-accent" : "text-muted hover:text-fg")}>

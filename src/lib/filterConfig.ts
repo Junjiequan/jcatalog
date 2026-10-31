@@ -6,8 +6,8 @@ import bundledYaml from "../../config/filters.yaml?raw";
 // The file is fetched at runtime, so a facility can change the panel without a rebuild. Anything wrong in it falls back
 // to the bundled copy of the file and is reported in the console. Only functions and types live here; the settings are in config/.
 
-export type FilterField = "techniques" | "instruments" | "proposals" | "keywords" | "created" | "data" | "measurements";
-export type FilterWidget = "tiles" | "rows" | "chips" | "toggles" | "timeline" | "sliders";
+export type FilterField = "techniques" | "instruments" | "proposals" | "keywords" | "created" | "measurements";
+export type FilterWidget = "tiles" | "rows" | "chips" | "timeline" | "sliders";
 
 export interface FilterEntry {
   field: FilterField;
@@ -18,8 +18,6 @@ export interface FilterEntry {
   limit?: number;
   // measurements: only these properties can be added
   properties?: string[];
-  // data: which of the two-value facets to show
-  fields?: ("types" | "storage")[];
 }
 
 export interface FilterConfig {
@@ -32,7 +30,6 @@ const SPEC: Record<FilterField, { widgets: FilterWidget[]; label: string; open: 
   measurements: { widgets: ["sliders"], label: "Measurements", open: false },
   proposals: { widgets: ["rows"], label: "Proposal", open: false, limit: 5 },
   created: { widgets: ["timeline"], label: "Created", open: false },
-  data: { widgets: ["toggles"], label: "Type", open: false },
   keywords: { widgets: ["chips", "rows"], label: "Keywords", open: false, limit: 8 },
 };
 
@@ -73,11 +70,6 @@ function check(text: string): Parsed {
       else warnings.push(`${at}: limit must be a positive whole number; using ${spec.limit ?? "the default"}`);
     }
     if (field === "measurements" && Array.isArray(raw.properties)) entry.properties = raw.properties.filter((p): p is string => typeof p === "string");
-    if (field === "data") {
-      const f = Array.isArray(raw.fields) ? raw.fields.filter((x): x is "types" | "storage" => x === "types" || x === "storage") : undefined;
-      if (raw.fields !== undefined && !f?.length) warnings.push(`${at}: fields must list types and/or storage; showing both`);
-      else if (f?.length) entry.fields = f;
-    }
     filters.push(entry);
   });
   return { config: { filters }, warnings };

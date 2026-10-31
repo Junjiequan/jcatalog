@@ -29,10 +29,12 @@ export function EmptyState({ icon: Icon, title, description, children, className
 
 /** What every list shows when a search matches nothing. */
 
-export function NoMatches({ query, noun, onClear }: { query: string; noun: string; onClear: () => void }) {
+// `filters`: applied tag filters, which clear along with the search text
+export function NoMatches({ query, noun, onClear, filters }: { query: string; noun: string; onClear: () => void; filters?: boolean }) {
+  const byFilters = !query.trim();
   return (
-    <EmptyState icon={SearchX} title={`No ${noun} match “${query.trim()}”`} description="Check the spelling or try fewer words.">
-      <Button onClick={onClear}>Clear search</Button>
+    <EmptyState icon={SearchX} title={byFilters ? `No ${noun} match your filters` : `No ${noun} match “${query.trim()}”`} description={byFilters ? "Try removing a filter." : filters ? "Check the spelling, or try fewer words or filters." : "Check the spelling or try fewer words."}>
+      <Button onClick={onClear}>{byFilters ? "Clear filters" : filters ? "Clear all" : "Clear search"}</Button>
     </EmptyState>
   );
 }

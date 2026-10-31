@@ -161,8 +161,8 @@ function AttachmentCard({ a, isThumb, canEdit, onOpen, onRemove, onThumb, onCapt
     <article className="group card flex flex-col overflow-hidden">
       <button onClick={onOpen} className="relative block aspect-[8/5] w-full overflow-hidden bg-slate-900" aria-label={`Preview ${a.fileName}`}>
         {picture ? <img src={picture} alt="" draggable={false} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" /> : <Skeleton className="h-full w-full rounded-none" />}
-        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm"><Icon className="h-3 w-3" />{langOf(a.fileName) ?? (kind === "other" ? extOf(a.fileName).toUpperCase() : KIND_LABEL[kind])}</span>
-        {isThumb && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />Thumbnail</span>}
+        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white"><Icon className="h-3 w-3" />{langOf(a.fileName) ?? (kind === "other" ? extOf(a.fileName).toUpperCase() : KIND_LABEL[kind])}</span>
+        {isThumb && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />Thumbnail</span>}
         <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/35 group-hover:opacity-100"><Eye className="h-6 w-6" /></span>
       </button>
       <div className="flex flex-1 flex-col gap-1 p-3">
@@ -320,7 +320,7 @@ function ImageViewer({ src, alt }: { src: string; alt: string }) {
         style={{ transform: `translate(${v.x}px, ${v.y}px) scale(${v.s})` }}
         className="max-h-full max-w-full object-contain will-change-transform"
       />
-      <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-lg bg-black/65 p-1 text-white backdrop-blur-sm" onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-lg bg-black/65 p-1 text-white" onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <Tip label="Zoom out"><button aria-label="Zoom out" onClick={() => zoomAt(1 / 1.5)} disabled={v.s <= 1} className="rounded-md p-1.5 hover:bg-white/15 disabled:opacity-40"><ZoomOut className="h-4 w-4" /></button></Tip>
         <span className="tnum w-12 text-center text-xs font-medium">{pct}%</span>
         <Tip label="Zoom in"><button aria-label="Zoom in" onClick={() => zoomAt(1.5)} disabled={v.s >= MAX_ZOOM} className="rounded-md p-1.5 hover:bg-white/15 disabled:opacity-40"><ZoomIn className="h-4 w-4" /></button></Tip>

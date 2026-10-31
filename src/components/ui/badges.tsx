@@ -53,9 +53,9 @@ export function KeywordChips({ words, onPick, size = "md", max, nowrap }: { word
       {shown.map((w) => {
         const cls = clsx("inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent-soft font-medium text-accent", size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-0.5 text-xs");
         return onPick ? (
-          <button key={w} onClick={(e) => (e.stopPropagation(), onPick(w))} title={`Show everything tagged “${w}”`} className={clsx(cls, "hover:border-accent hover:bg-accent hover:text-accent-fg")}><Tag className="h-3 w-3" />{w}</button>
+          <button key={w} onClick={(e) => (e.stopPropagation(), onPick(w))} title={`Show everything tagged “${w}”`} className={clsx(cls, "hover:border-accent hover:bg-accent hover:text-accent-fg")}><Tag className="h-3 w-3 shrink-0" /><span className="max-w-[8rem] truncate">{w}</span></button>
         ) : (
-          <span key={w} className={cls}><Tag className="h-3 w-3" />{w}</span>
+          <span key={w} className={cls}><Tag className="h-3 w-3 shrink-0" /><span className="max-w-[8rem] truncate" title={w}>{w}</span></span>
         );
       })}
       {max !== undefined && words.length > max && <MoreChip count={words.length - max} title="All keywords"><KeywordChips words={words} onPick={onPick} size={size} /></MoreChip>}

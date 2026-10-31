@@ -31,15 +31,15 @@ interface Col {
 const COLS: Col[] = [
   { key: "runNumber", label: "Run", sort: "runNumber", cell: (d) => <span className="tnum font-medium">{d.runNumber}</span> },
   { key: "keywords", label: "Keywords", cell: (d) => <KeywordChips words={d.keywords} max={2} nowrap size="sm" /> },
-  { key: "instrument", label: "Instrument", sort: "instrumentName", cell: (d) => <InstrumentChips ids={d.instrumentIds} size="sm" nowrap /> },
-  { key: "technique", label: "Technique", cell: (d) => <TechniqueChips names={techniqueNames(d)} nowrap /> },
-  { key: "proposal", label: "Proposal", cell: (d) => <span className="tnum text-muted" title={d.proposalTitle}>{d.proposalId}</span> },
+  { key: "instrument", label: "Instrument", sort: "instrumentName", cell: (d) => <InstrumentChips ids={d.instrumentIds} size="sm" nowrap max={2} /> },
+  { key: "technique", label: "Technique", cell: (d) => <TechniqueChips names={techniqueNames(d)} nowrap max={2} /> },
+  { key: "proposal", label: "Proposal", cell: (d) => <span className="tnum block max-w-[6.5rem] truncate text-muted" title={`${d.proposalId} · ${d.proposalTitle}`}>{d.proposalId}</span> },
   { key: "sample", label: "Sample", cell: (d) => <span className="block max-w-[200px] truncate text-muted" title={d.sampleName}>{d.sampleName}</span> },
   { key: "type", label: "Type", cell: (d) => <TypeBadge type={d.type} /> },
   { key: "created", label: "Created", sort: "creationTime", cell: (d) => <span className="text-muted" title={fmtDate(d.creationTime, true)}>{fmtDate(d.creationTime)}</span> },
   { key: "size", label: "Size", sort: "size", right: true, cell: (d) => <span className="tnum text-muted">{fmtBytes(d.size)}</span> },
   { key: "files", label: "Files", sort: "numberOfFiles", right: true, cell: (d) => <span className="tnum text-muted">{fmtNum(d.numberOfFiles)}</span> },
-  { key: "owner", label: "Owner", cell: (d) => <span className="text-muted">{d.owner}</span> },
+  { key: "owner", label: "Owner", cell: (d) => <span className="block max-w-[9rem] truncate text-muted" title={d.owner}>{d.owner}</span> },
 ];
 
 export function TableSkeleton({ density }: { density: Density }) {
@@ -72,11 +72,11 @@ export function GridSkeleton() {
   );
 }
 
-// approximate widths, in the order columns are dropped when space runs out (last = first to go)
-const EST: Record<ColumnKey, number> = { runNumber: 70, keywords: 220, instrument: 120, technique: 120, proposal: 110, sample: 190, type: 80, created: 120, size: 90, files: 80, owner: 150 };
+// the room each column needs, and the order they are kept in when space runs out (first = last to go)
+const EST: Record<ColumnKey, number> = { runNumber: 70, keywords: 260, instrument: 200, technique: 130, proposal: 130, sample: 200, type: 80, created: 120, size: 90, files: 80, owner: 150 };
 const PRIORITY: ColumnKey[] = ["runNumber", "created", "size", "instrument", "technique", "keywords", "type", "sample", "proposal", "files", "owner"];
 
-export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, sort, dir, onSort, width, onKeyword, onInstrument, onTechnique }: Common & {
+export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, sort, dir, onSort, onKeyword, onInstrument, onTechnique }: Common & {
   onKeyword?: (k: string) => void;
   onInstrument?: (id: string) => void;
   onTechnique?: (name: string) => void;
@@ -85,19 +85,11 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
   sort: SortKey;
   dir: "asc" | "desc";
   onSort: (k: SortKey) => void;
-  width: number;
 }) {
   const toggle = useSelection((s) => s.toggle);
   const selected = useSelection((s) => s.items);
-  // columns drop out, least important first, as the results area narrows
-  let budget = (width || 1200) - 40 - 36 - 300;
-  const visible = new Set<ColumnKey>();
-  for (const k of PRIORITY) {
-    if (columns[k] && budget >= EST[k]) {
-      visible.add(k);
-      budget -= EST[k];
-    }
-  }
+  // the ones the person switched on; the table itself drops what does not fit, least important first
+  const visible = new Set<ColumnKey>(PRIORITY.filter((k) => columns[k]));
   // on a phone the name column carries instrument, age and size itself
   const phone = useMediaQuery("(max-width: 639px)");
   const compact = density === "compact";
@@ -123,7 +115,7 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
         </>
       ),
     },
-    ...(phone ? [] : COLS.filter((c) => visible.has(c.key)).map((c): TableColumn<Dataset> => ({ key: c.key, label: c.label, sort: c.sort, right: c.right, className: "whitespace-nowrap", render: (d) => (c.key === "keywords" ? <KeywordChips words={d.keywords} max={2} nowrap size="sm" onPick={onKeyword} /> : c.key === "instrument" ? <InstrumentChips ids={d.instrumentIds} size="sm" nowrap onPick={onInstrument} /> : c.key === "technique" ? <TechniqueChips names={techniqueNames(d)} nowrap onPick={onTechnique} /> : c.cell(d)) }))),
+    ...(phone ? [] : COLS.filter((c) => visible.has(c.key)).map((c): TableColumn<Dataset> => ({ key: c.key, label: c.label, sort: c.sort, right: c.right, className: "whitespace-nowrap", fit: { width: EST[c.key], rank: PRIORITY.indexOf(c.key) }, render: (d) => (c.key === "keywords" ? <KeywordChips words={d.keywords} max={2} nowrap size="sm" onPick={onKeyword} /> : c.key === "instrument" ? <InstrumentChips ids={d.instrumentIds} size="sm" nowrap onPick={onInstrument} /> : c.key === "technique" ? <TechniqueChips names={techniqueNames(d)} nowrap onPick={onTechnique} /> : c.cell(d)) }))),
   ];
   return (
     <Table
@@ -169,8 +161,8 @@ export function DatasetGrid({ items, peek, onPeek, onOpen, hasMore, onNext, onKe
             <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl">
               <Thumb d={d} preview className="h-full w-full transition-transform duration-500 group-hover:scale-[1.05]" />
               <div className="absolute right-3 top-3 flex gap-1">
-                {d.isPublished && <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">Published</span>}
-                <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">{d.type === "raw" ? "Raw" : "Derived"}</span>
+                {d.isPublished && <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white">Published</span>}
+                <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white">{d.type === "raw" ? "Raw" : "Derived"}</span>
               </div>
               {storageOf(d) !== "online" && (
                 <span className="absolute bottom-2 left-2 rounded-md bg-amber-400/90 px-1.5 py-0.5 text-[10px] font-semibold text-amber-950">{storageOf(d) === "archived" ? "Archived" : "Retrieving…"}</span>

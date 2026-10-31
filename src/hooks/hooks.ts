@@ -11,6 +11,47 @@ export function useRecordRecent(item: RecentItem | undefined) {
   }, [item?.kind, item?.pid]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+// Opening a preview takes the place of a docked selection panel when the two do not fit side by side
+export function yieldSelectionTo(id: string | null) {
+  if (id && matchMedia("(min-width: 1280px) and (max-width: 1535px)").matches) useUI.getState().set({ selectionOpen: false });
+}
+
+// The text in a list's search box, kept in the URL as ?q=, so a link (or quick access) can open the list already searched.
+export function useSearchText(): [string, (v: string) => void] {
+  const [sp, setSp] = useSearchParams();
+  const set = useCallback(
+    (v: string) =>
+      setSp((prev) => {
+        const next = new URLSearchParams(prev);
+        if (v) next.set("q", v);
+        else next.delete("q");
+        next.delete("page");
+        return next;
+      }, { replace: true }),
+    [setSp],
+  );
+  return [sp.get("q") ?? "", set];
+}
+
+// The item a list shows in its preview panel, kept in the URL as ?peek=<id>.
+export function usePeekParam(): [string | null, (id: string | null) => void] {
+  const [sp, setSp] = useSearchParams();
+  const peek = sp.get("peek");
+  const set = useCallback(
+    (id: string | null) => {
+      yieldSelectionTo(id);
+      setSp((prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set("peek", id);
+        else next.delete("peek");
+        return next;
+      }, { replace: true });
+    },
+    [setSp],
+  );
+  return [peek, set];
+}
+
 // Table or cards for a list page, remembered per page.
 export function useListView(key: string, fallback: ListView): [ListView, (v: ListView) => void] {
   const views = useUI((s) => s.listViews);

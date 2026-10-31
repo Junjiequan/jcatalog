@@ -2,13 +2,13 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { proposalLink } from "@/lib/query";
-import { ArrowRight, Beaker, Calendar, Check, Database, FileCode, FileSearch, FileText, Link2, MoreHorizontal, Plus, Tag, X } from "lucide-react";
+import { ArrowRight, Beaker, Calendar, Check, Database, FileCode, FileSearch, FileText, Link2, MoreHorizontal, Plus } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
-import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb, TabBar } from "@/components/ui/Primitives";
-import { useSelection, type SelItem } from "@/store/selection";
+import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb, TabBar, Fact } from "@/components/ui/Primitives";
+import { proposalItem, useSelection, type SelItem } from "@/store/selection";
 import {proposalKind, proposalMeta, type HistoryEvent, type Proposal, type ProposalKind, storageOf, proposerName} from "@/types";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
-import { InstrumentChips, TechniqueChips, techniquesOf } from "@/components/InstrumentChips";
+import { InstrumentChips } from "@/components/InstrumentChips";
 import { ClipRow } from "@/components/ui/Overlay";
 import { useUI } from "@/store/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -18,11 +18,16 @@ import { Button } from "@/components/ui/Button";
 import { currentUser } from "@/lib/session";
 import { api } from "@/api";
 import { toast } from "@/store/toasts";
-import { useListView, usePaging, useRecordRecent } from "@/hooks/hooks";
+import { useListView, usePaging, usePeekParam, useRecordRecent, useSearchText } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { fmtBytes, fmtDate, fmtNum, plural } from "@/lib/format";
 import { datasetLink } from "@/lib/query";
 import { StorageBadge } from "../datasets/shared";
+import { KIND_UI, KindBadge, ProposalStatus, statusOf } from "./badges";
+import { PeekSheet } from "@/components/PeekSheet";
+import { ProposalPeek } from "./ProposalPeek";
+import { AppliedFilters, FilterToggle, ListFilters, useListFilter, type Fields } from "@/components/FilterShell";
+import { TagScopeProvider, useTagTarget } from "@/components/tagScope";
 
 
 // Row selection over this page's items, shared by the table and the cards
@@ -37,93 +42,76 @@ function useRowSelection<T>(toItem: (row: T) => SelItem): TableSelection<T> & { 
   };
 }
 
-// A proposal and an experiment must be told apart at a glance: different icon, different colour, and the word itself
-const KIND_UI = {
-  proposal: { label: "Proposal", icon: FileText, cls: "bg-accent-soft text-accent", tile: "bg-accent-soft text-accent" },
-  experiment: { label: "Experiment", icon: Beaker, cls: "bg-violet-500/12 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300", tile: "bg-violet-500/12 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300" },
-} as const;
-
-export function KindBadge({ p, className }: { p: Pick<Proposal, "type" | "parentProposalId">; className?: string }) {
-  const k = KIND_UI[proposalKind(p)];
-  return (
-    <span title={p.type} className={clsx("inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-4", k.cls, className)}>
-      <k.icon className="h-3 w-3 shrink-0" />{k.label}
-    </span>
-  );
-}
-
-// SciCat keeps the facility's status words in metadata: ALLOCATED, ACTIVE, COMPLETED…
-export const statusOf = (p: Proposal) => String(proposalMeta(p, proposalKind(p) === "experiment" ? "status_experiment" : "status_proposal") ?? "");
-const STATUS_TONE: Record<string, "success" | "accent" | "neutral" | "warn"> = { ACTIVE: "success", ALLOCATED: "accent", COMPLETED: "neutral", CLOSED: "neutral", PENDING: "warn" };
-export function ProposalStatus({ p }: { p: Proposal }) {
-  const v = statusOf(p);
-  if (!v) return null;
-  return <Badge tone={STATUS_TONE[v] ?? "neutral"} title={`${proposalMeta(p, "status_experiment") !== undefined && proposalKind(p) === "experiment" ? "Experiment" : "Proposal"} status`}>{v.charAt(0) + v.slice(1).toLowerCase()}</Badge>;
-}
-
-export const ProposalsPage = () => <ProposalsList kind="proposal" />;
-export const ExperimentsPage = () => <ProposalsList kind="experiment" />;
+// a tag clicked on these pages finds more proposals (or experiments), not datasets
+// what each page's filter panel offers, and so what its query is built from
+const PROPOSAL_FILTERS: Fields = ["instruments", "keywords"];
+const EXPERIMENT_FILTERS: Fields = ["instruments", "keywords"];
+export const ProposalsPage = () => <TagScopeProvider value="proposals"><ListFilters fields={PROPOSAL_FILTERS}><ProposalsList kind="proposal" /></ListFilters></TagScopeProvider>;
+export const ExperimentsPage = () => <TagScopeProvider value="experiments"><ListFilters fields={EXPERIMENT_FILTERS}><ProposalsList kind="experiment" /></ListFilters></TagScopeProvider>;
 
 // Proposals and experiments are separate pages built from the same list; an experiment always says which proposal it belongs to
 function ProposalsList({ kind }: { kind: ProposalKind }) {
   const noun = kind === "experiment" ? "experiment" : "proposal";
   const { data, error, reload } = useResource(["proposals"], () => api.proposals.list());
-  const [q, setQ] = useState("");
+  const [q, setQ] = useSearchText();
   const [who, setWho] = useState<"all" | "mine" | "public">("all");
   const nav = useNavigate();
-  // a keyword filter lives in the URL (?kw=), so a tag clicked anywhere opens the list already filtered
-  const [sp, setSp] = useSearchParams();
-  const kw = sp.get("kw") ?? "";
-  const setKw = (k: string) => setSp((prev) => { const n = new URLSearchParams(prev); if (k) n.set("kw", k); else n.delete("kw"); n.delete("page"); return n; }, { replace: true });
+  // tag filters live in the URL (?inst= ?tech= ?kw=), so a tag clicked anywhere opens the list already filtered
+  const tags = useListFilter();
+  const [, setSp] = useSearchParams();
+  const setKw = useTagTarget().keyword;
   const list = useMemo(
-    () => (data ?? []).filter((p) => (who === "all" || (who === "mine" ? currentUser().groups.includes(p.ownerGroup) : p.isPublished)) && proposalKind(p) === kind && (!kw || p.keywords.some((x) => x.toLowerCase() === kw.toLowerCase())) && matchesSearch(q, p.proposalId, p.title, p.pi, p.abstract, p.type, p.keywords, statusOf(p), p.parentProposalId, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))),
-    [data, q, who, kind, kw],
+    () => (data ?? []).filter((p) => (who === "all" || (who === "mine" ? currentUser().groups.includes(p.ownerGroup) : p.isPublished)) && proposalKind(p) === kind && tags.test({ instrumentIds: p.instrumentIds, keywords: p.keywords }) && matchesSearch(q, p.proposalId, p.title, p.pi, p.abstract, p.type, p.keywords, statusOf(p), p.parentProposalId, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))),
+    [data, q, who, kind, tags],
   );
-  const pg = usePaging(list, `${who}|${q}|${kw}`);
+  const pg = usePaging(list, `${who}|${q}|${tags.key}`);
+  // the proposal (or experiment) whose preview is open (?peek=), and the one before and after it on this page
+  const [peek, setPeek] = usePeekParam();
+  const at = pg.items.findIndex((x) => x.proposalId === peek);
+  const step = (d: number) => (at + d >= 0 && at + d < pg.items.length ? () => setPeek(pg.items[at + d].proposalId) : undefined);
   const titleOf = (id?: string | null) => (id ? (data ?? []).find((x) => x.proposalId === id)?.title : undefined);
   const [view, setView] = useListView("proposals", "cards");
   const show = useShownColumns("proposals");
   const density = useUI((s) => s.density);
-  const sel = useRowSelection<(typeof list)[number]>((x) => ({ kind: proposalKind(x), id: `proposal:${x.proposalId}`, name: x.title, sub: x.proposalId, link: proposalLink(x.proposalId) }));
+  const sel = useRowSelection<(typeof list)[number]>(proposalItem);
   const cols: Column<(typeof list)[number]>[] = [
-    { key: "title", label: "Title", className: "max-w-[420px]", render: (p) => <><div className="truncate font-medium group-hover:text-accent" title={p.title}>{p.title}</div><div className="sub tnum text-xs text-muted">{p.proposalId}</div></> },
-    ...(kind === "experiment" ? [{ key: "proposal", label: "Proposal", className: "max-w-[260px]", render: (p: (typeof list)[number]) => <Link to={`/proposals/${p.parentProposalId}`} onClick={(e) => e.stopPropagation()} className="block truncate text-accent hover:underline" title={titleOf(p.parentProposalId)}><span className="tnum font-mono">{p.parentProposalId}</span> <span className="text-muted">· {titleOf(p.parentProposalId)}</span></Link> }] : []),
-    { key: "instruments", label: "Instruments", className: "whitespace-nowrap", render: (p) => <InstrumentChips ids={p.instrumentIds} max={2} nowrap size="sm" /> },
-    { key: "techniques", label: "Techniques", className: "whitespace-nowrap", render: (p) => <TechniqueChips names={techniquesOf(p.instrumentIds)} nowrap /> },
-    { key: "status", label: "Status", render: (p) => <ProposalStatus p={p} /> },
-    { key: "keywords", label: "Keywords", className: "whitespace-nowrap", render: (p) => <KeywordChips words={p.keywords} max={2} nowrap onPick={setKw} size="sm" /> },
-    { key: "pi", label: "Principal investigator", render: (p) => <span className="flex items-center gap-2 whitespace-nowrap"><Avatar name={p.pi} size={22} />{p.pi}</span> },
-    { key: "start", label: "Start", className: "whitespace-nowrap", render: (p) => fmtDate(p.startTime) },
-    { key: "end", label: "End", className: "whitespace-nowrap", render: (p) => fmtDate(p.endTime) },
-    { key: "n", label: "Datasets", center: true, render: (p) => <span className="tnum font-semibold">{fmtNum(p.datasetCount)}</span> },
+    { key: "title", label: "Title", render: (p) => <><div className="truncate font-medium group-hover:text-accent" title={p.title}>{p.title}</div><div className="sub tnum text-xs text-muted">{p.proposalId}</div></> },
+    ...(kind === "experiment" ? [{ key: "proposal", label: "Proposal", fit: { width: 110, rank: 4 }, className: "whitespace-nowrap", render: (p: (typeof list)[number]) => <Link to={`/proposals/${p.parentProposalId}`} onClick={(e) => e.stopPropagation()} className="block max-w-[7rem] truncate text-accent hover:underline" title={`${p.parentProposalId} · ${titleOf(p.parentProposalId)}`}><span className="tnum font-mono">{p.parentProposalId}</span></Link> }] : []),
+    { key: "instruments", label: "Instruments", fit: { width: 190, rank: 2 }, className: "whitespace-nowrap", render: (p) => <InstrumentChips ids={p.instrumentIds} max={2} nowrap size="sm" /> },
+    { key: "status", label: "Status", fit: { width: 110, rank: 1 }, render: (p) => <ProposalStatus p={p} /> },
+    { key: "keywords", label: "Keywords", fit: { width: 270, rank: 3 }, className: "whitespace-nowrap", render: (p) => <KeywordChips words={p.keywords} max={2} nowrap onPick={setKw} size="sm" /> },
+    { key: "pi", label: "Principal investigator", fit: { width: 190, rank: 6 }, render: (p) => <span className="flex items-center gap-2 whitespace-nowrap"><Avatar name={p.pi} size={22} />{p.pi}</span> },
+    { key: "start", label: "Start", fit: { width: 110, rank: 5 }, className: "whitespace-nowrap", render: (p) => fmtDate(p.startTime) },
+    { key: "end", label: "End", fit: { width: 110, rank: 8 }, className: "whitespace-nowrap", render: (p) => fmtDate(p.endTime) },
+    { key: "n", label: "Datasets", fit: { width: 90, rank: 0 }, center: true, render: (p) => <span className="tnum font-semibold">{fmtNum(p.datasetCount)}</span> },
   ];
   return (
     <Page>
       <PageHeader title={kind === "experiment" ? "Experiments" : "Proposals"} />
       <ListToolbar>
+        <FilterToggle place="start" />
         <SearchInput value={q} onChange={setQ} placeholder={kind === "experiment" ? "Search experiments by title, number, proposal or status…" : "Search proposals by title, number, investigator or status…"} />
-        {kw && (
-          <button onClick={() => setKw("")} title="Remove the keyword filter" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-2.5 text-[13px] font-medium text-accent hover:border-accent">
-            <Tag className="h-3.5 w-3.5" />{kw}<X className="h-3.5 w-3.5" />
-          </button>
-        )}
         <Segmented value={who} onChange={setWho} options={[{ value: "mine", label: "My group" }, { value: "public", label: "Public" }, { value: "all", label: "All" }]} />
+        <FilterToggle place="end" />
         <ViewOptions page="proposals" columns={cols} className="ml-auto" />
         <ViewSwitch value={view} onChange={setView} />
+        <AppliedFilters />
       </ListToolbar>
       {error ? (
         <ErrorState onRetry={reload} />
       ) : !data ? (
         <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
       ) : list.length === 0 ? (
-        (q.trim() || kw) ? <NoMatches query={q || kw} noun={kind === "experiment" ? "experiments" : "proposals"} onClear={() => (setQ(""), setKw(""))} /> : <EmptyState icon={FileSearch} title={`No ${noun}s in this view`} description={who === "public" ? `No ${noun}s have been made public yet.` : who === "mine" ? `None of your groups own a ${noun} yet. Try Public or All.` : "Nothing to show."} />
+        (q.trim() || tags.active) ? <NoMatches query={q} filters={tags.active} noun={kind === "experiment" ? "experiments" : "proposals"} onClear={() => { setQ(""); setSp((prev) => { const n = new URLSearchParams(prev); ["inst", "tech", "kw", "page"].forEach((k) => n.delete(k)); return n; }, { replace: true }); }} /> : <EmptyState icon={FileSearch} title={`No ${noun}s in this view`} description={who === "public" ? `No ${noun}s have been made public yet.` : who === "mine" ? `None of your groups own a ${noun} yet. Try Public or All.` : "Nothing to show."} />
       ) : (
         <>
         {view === "cards" ? (
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
           {pg.items.map((p) => (
             // the same card as a sample, with the kind (proposal or experiment) as its icon colour and first badge
-            <div key={p.proposalId} className={cardCls(sel.checked(p), "flex flex-col p-5")}>
+            // a mouse shortcut for the preview; the Preview button in the footer is the keyboard way
+            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+            <div key={p.proposalId} onClick={() => setPeek(p.proposalId)} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-5", peek === p.proposalId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.proposalId}`} className="-right-2 -top-2" />
               <div className="flex items-center gap-3">
                 <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", KIND_UI[proposalKind(p)].tile)}>{(() => { const I = KIND_UI[proposalKind(p)].icon; return <I className="h-5 w-5" />; })()}</span>
@@ -131,17 +119,20 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
               </div>
               <h3 className="mt-3 line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug" title={p.title}>{p.title}</h3>
               <div className="tnum mt-0.5 truncate font-mono text-xs text-muted">{p.proposalId}</div>
-              <div className="mt-3 space-y-1.5"><div><InstrumentChips ids={p.instrumentIds} size="sm" /></div><div><TechniqueChips names={techniquesOf(p.instrumentIds)} /></div></div>
+              <div className="mt-3"><InstrumentChips ids={p.instrumentIds} size="sm" /></div>
               <p className="mt-3 line-clamp-3 flex-1 whitespace-pre-line text-[13px] text-muted">{p.abstract}</p>
               {p.keywords.length > 0 && <div className="mt-3 min-h-[1.75rem]"><KeywordChips words={p.keywords} onPick={setKw} size="sm" /></div>}
               <dl className="mt-3 mb-4 space-y-1 text-[13px]">
-                {p.parentProposalId && <div className="flex justify-between gap-3"><dt className="shrink-0 text-subtle">Proposal</dt><dd className="min-w-0 text-right font-medium"><Link to={`/proposals/${p.parentProposalId}`} className="block truncate text-accent hover:underline" title={titleOf(p.parentProposalId)}>{p.parentProposalId}{titleOf(p.parentProposalId) && ` · ${titleOf(p.parentProposalId)}`}</Link></dd></div>}
+                {p.parentProposalId && <div className="flex justify-between gap-3"><dt className="shrink-0 text-subtle">Proposal</dt><dd className="min-w-0 text-right font-medium"><Link to={`/proposals/${p.parentProposalId}`} className="block truncate text-accent hover:underline" title={titleOf(p.parentProposalId)}>{p.parentProposalId}</Link></dd></div>}
                 <div className="flex justify-between gap-3"><dt className="text-subtle">Investigator</dt><dd className="flex min-w-0 items-center gap-1.5 text-right font-medium"><Avatar name={p.pi} size={18} /><span className="truncate">{p.pi}</span></dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-subtle">Period</dt><dd className="text-right font-medium">{fmtDate(p.startTime)} – {fmtDate(p.endTime)}</dd></div>
               </dl>
               <div className="mt-auto flex items-center justify-between border-t border-line pt-3">
                 <span className="tnum text-[13px] text-muted">{plural(p.datasetCount, "dataset")}</span>
-                <Link to={proposalLink(p.proposalId)} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Open {noun} <ArrowRight className="h-3.5 w-3.5" /></Link>
+                <span className="flex items-center gap-3">
+                  <button onClick={(e) => (e.stopPropagation(), setPeek(p.proposalId))} className="text-[13px] font-medium text-muted hover:text-accent hover:underline">Preview</button>
+                  <Link to={proposalLink(p.proposalId)} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Open {noun} <ArrowRight className="h-3.5 w-3.5" /></Link>
+                </span>
               </div>
             </div>
           ))}
@@ -152,11 +143,13 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
             density={density}
             rowKey={(p) => p.proposalId}
             selection={sel}
-            onRow={(p) => nav(proposalLink(p.proposalId))}
+            onRow={(p) => setPeek(p.proposalId)}
+            onRowDoubleClick={(p) => nav(proposalLink(p.proposalId))}
+            active={(p) => p.proposalId === peek}
             columns={show(cols)}
             phoneSummary={(p) => (
               <>
-                <ClipRow className="mt-1" title="Instruments and techniques" full={<><InstrumentChips ids={p.instrumentIds} size="sm" /><TechniqueChips names={techniquesOf(p.instrumentIds)} /></>}><span className="inline-flex items-center gap-1.5"><InstrumentChips ids={p.instrumentIds} size="sm" nowrap /><TechniqueChips names={techniquesOf(p.instrumentIds)} nowrap /></span></ClipRow>
+                <ClipRow className="mt-1" title="Instruments" full={<InstrumentChips ids={p.instrumentIds} size="sm" />}><InstrumentChips ids={p.instrumentIds} size="sm" nowrap /></ClipRow>
                 <ClipRow className="tnum mt-1 text-xs text-muted" title="Details">{[statusOf(p) && statusOf(p).charAt(0) + statusOf(p).slice(1).toLowerCase(), p.pi, `${fmtDate(p.startTime)} – ${fmtDate(p.endTime)}`, plural(p.datasetCount, "dataset")].filter(Boolean).join(" · ")}</ClipRow>
               </>
             )}
@@ -165,6 +158,7 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
         <Pager className={STICKY_PAGER} from={pg.from} to={pg.to} totalLabel={list.length} page={pg.page} totalPages={pg.totalPages} hasMore={pg.hasMore} pageSize={pg.pageSize} onPage={pg.setPage} onPageSize={pg.setPageSize} />
         </>
       )}
+      <PeekSheet open={!!peek} onClose={() => setPeek(null)} onPrev={step(-1)} onNext={step(1)}>{peek && <ProposalPeek id={peek} />}</PeekSheet>
     </Page>
   );
 }
@@ -189,11 +183,16 @@ const downloadBlob = (name: string, text: string) => {
   URL.revokeObjectURL(a.href);
 };
 
-const Fact = ({ label, children }: { label: string; children: React.ReactNode }) => (children === undefined || children === null || children === "" ? null : <div className="flex justify-between gap-4 border-b border-line py-2 text-[13px] last:border-b-0"><dt className="shrink-0 text-subtle">{label}</dt><dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">{children}</dd></div>);
 
 // The same layout as the dataset page: breadcrumb, a hero card, sticky tabs, tab body — filled from the SciCat proposal record
 export function ProposalDetailPage() {
+  const experiment = useLocation().pathname.startsWith("/experiments");
+  return <TagScopeProvider value={experiment ? "experiments" : "proposals"}><ProposalDetail /></TagScopeProvider>;
+}
+
+function ProposalDetail() {
   const { id = "" } = useParams();
+  const target = useTagTarget();
   const nav = useNavigate();
   const loc = useLocation();
   const [sp, setSp] = useSearchParams();
@@ -219,7 +218,7 @@ export function ProposalDetailPage() {
   ];
   const tab = (tabs.some((t) => t.id === sp.get("tab")) ? sp.get("tab") : "overview") as PTab;
   const setTab = (t: PTab) => setSp((prev) => { const n = new URLSearchParams(prev); n.set("tab", t); return n; }, { replace: true });
-  const item: SelItem = { kind, id: `proposal:${p.proposalId}`, name: p.title, sub: p.proposalId, link: proposalLink(p.proposalId) };
+  const item: SelItem = proposalItem(p);
   const doi = m("published_data_doi") as string | undefined;
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-5 animate-fade-in sm:px-8">
@@ -237,8 +236,8 @@ export function ProposalDetailPage() {
             <span className="flex items-center gap-1"><span className="tnum">{p.proposalId}</span><CopyButton text={p.proposalId} label="Copy number" /></span>
             {parent && <Link to={`/proposals/${parent.proposalId}`} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-accent/25 bg-accent-soft/50 px-2 py-0.5 font-medium text-accent hover:bg-accent-soft"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Belongs to proposal {parent.proposalId} · {parent.title}</span><ArrowRight className="h-3.5 w-3.5 shrink-0" /></Link>}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2"><InstrumentChips ids={p.instrumentIds} /><TechniqueChips names={techniquesOf(p.instrumentIds)} /></div>
-          {p.keywords.length > 0 && <div className="mt-2"><KeywordChips words={p.keywords} onPick={(k) => nav(`${kind === "experiment" ? "/experiments" : "/proposals"}?kw=${encodeURIComponent(k)}`)} /></div>}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2"><InstrumentChips ids={p.instrumentIds} /></div>
+          {p.keywords.length > 0 && <div className="mt-2"><KeywordChips words={p.keywords} onPick={target.keyword} /></div>}
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-muted">
             <span className="flex items-center gap-1.5"><Avatar name={p.pi} size={16} />{p.pi}</span>
             <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" />{fmtDate(p.startTime)} – {fmtDate(p.endTime)}</span>

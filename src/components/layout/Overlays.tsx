@@ -5,7 +5,8 @@ import clsx from "clsx";
 import { AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, GripVertical, Info, ListChecks, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout, Kbd } from "@/components/ui/Primitives";
-import { Menu, MenuItem, MenuLabel, MenuSep, Modal, Sheet, Tip } from "@/components/ui/Overlay";
+import { Menu, MenuItem, MenuLabel, MenuSep, Modal, Tip } from "@/components/ui/Overlay";
+import { SidePanel, useDock } from "@/components/SidePanel";
 import { ActionItems, BulkActionsMenu, useBulkRunner } from "@/components/BulkActions";
 import { useToasts, toast, type ToastItem } from "@/store/toasts";
 import { confirm, useConfirmStore } from "@/store/confirm";
@@ -100,7 +101,7 @@ export function ShortcutsDialog() {
       <div className="grid gap-x-10 gap-y-4 sm:grid-cols-2">
         <div>
           <div className="section-title mb-1">Anywhere</div>
-          <Row label="Command palette" keys={[MOD, "K"]} />
+          <Row label="Quick access" keys={[MOD, "K"]} />
           {canCreateDatasets() && <Row label="New dataset" keys={["C"]} />}
           <Row label="Toggle sidebar" keys={["["]} />
           <Row label="This help" keys={["?"]} />
@@ -228,10 +229,12 @@ export function SelectionSheet() {
   const runner = useBulkRunner(() => set({ selectionOpen: false }));
   const list = selectionList(items);
   const groups = byKind(list);
+  // docked beside the page, opening an item should not close the panel: the list stays at hand
+  const docked = !!useDock().slot;
   return (
-    <Sheet
+    <SidePanel
       open={open}
-      onOpenChange={(o) => set({ selectionOpen: o })}
+      onClose={() => set({ selectionOpen: false })}
       title={`Selection · ${list.length}`}
       footer={
         list.length ? (
@@ -253,7 +256,7 @@ export function SelectionSheet() {
         groups.map(([kind, l]) => (
           <section key={kind}>
             {/* heading: name, count, size, and one compact menu with the kind's actions for the whole group */}
-            <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-line bg-surface-3/70 py-1 pl-4 pr-2 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-line bg-surface-3 py-1 pl-4 pr-2">
               <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{KIND_LABEL[kind][1]} · {l.length}{kind === "dataset" && <span className="tnum ml-1 font-normal normal-case tracking-normal">· {fmtBytes(l.reduce((a, i) => a + (i.size ?? 0), 0))}</span>}</span>
               {/* every action for the whole group behind one ⋯ */}
               <Menu tip={`Actions for all ${l.length} ${KIND_LABEL[kind][l.length === 1 ? 0 : 1]}`} trigger={<Button size="icon-sm" variant="ghost" aria-label={`Actions for all ${KIND_LABEL[kind][1]}`}><MoreHorizontal className="h-4 w-4" /></Button>}>
@@ -266,7 +269,7 @@ export function SelectionSheet() {
             <ul className="divide-y divide-line">
               {l.map((i) => (
                 <li key={i.id} className="group flex items-center gap-3 px-4 py-3">
-                  <button className="min-w-0 flex-1 text-left" onClick={() => { set({ selectionOpen: false }); nav(i.link); }}>
+                  <button className="min-w-0 flex-1 text-left" onClick={() => { if (!docked) set({ selectionOpen: false }); nav(i.link); }}>
                     <div className="truncate text-sm font-medium hover:text-accent">{i.name}</div>
                     <div className="tnum truncate text-xs text-muted">{i.sub}{i.kind === "dataset" && ` · ${fmtBytes(i.size ?? 0)}`}{i.archived && " · archived"}</div>
                   </button>
@@ -281,6 +284,6 @@ export function SelectionSheet() {
           </section>
         ))
       )}
-    </Sheet>
+    </SidePanel>
   );
 }

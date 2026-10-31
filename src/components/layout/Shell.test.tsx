@@ -69,26 +69,38 @@ describe("shortcuts", () => {
   });
 });
 
-describe("the search palette", () => {
+describe("quick access", () => {
   it("opens with Ctrl+K and offers pages to go to", async () => {
     const { user } = await renderApp("/datasets");
     await screen.findByRole("heading", { name: "Datasets" });
     await user.keyboard("{Control>}k{/Control}");
-    const box = await screen.findByPlaceholderText(/Search datasets, proposals, samples/);
+    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
     expect(box).toHaveFocus();
     expect(screen.getByText("Go to")).toBeInTheDocument();
   });
 
-  it("finds a dataset by what is typed and opens it with Enter", async () => {
+  it("what is typed narrows what was opened lately, and asks the server for nothing", async () => {
+    useUI.getState().pushRecent({ kind: "dataset", pid: "D-1", name: "Lysozyme run" });
+    useUI.getState().pushRecent({ kind: "proposal", pid: "20240311", name: "A proposal" });
     const { user } = await renderApp("/datasets");
-    await screen.findByRole("heading", { name: "Datasets" });
-    await user.click(await screen.findByRole("button", { name: "Search everything" }));
-    const box = await screen.findByPlaceholderText(/Search datasets, proposals, samples/);
-    await user.type(box, "LOKI");
+    await user.click(await screen.findByRole("button", { name: "Quick access" }));
+    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
+    await user.type(box, "lysoz");
     const dialog = screen.getByRole("dialog");
-    await waitFor(() => expect(within(dialog).getAllByText(/^LOKI/).length).toBeGreaterThan(0));
-    await user.keyboard("{Enter}");
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toMatch(/^\/datasets\//));
+    // the typed letters are picked out in the label, which splits its text
+    const rows = within(dialog).getAllByRole("button").map((b) => b.textContent);
+    expect(rows.some((t) => t?.includes("Lysozyme run"))).toBe(true);
+    expect(rows.some((t) => t?.includes("A proposal"))).toBe(false);
+  });
+
+  it("a typed word is taken to the list of the section the user is in, already searched", async () => {
+    const { user } = await renderApp("/proposals");
+    await user.click(await screen.findByRole("button", { name: "Quick access" }));
+    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
+    await user.type(box, "zzqq");
+    await user.click(await screen.findByText(/ in proposals$/, { selector: "span" }).then((e) => e.closest("button")!));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/proposals?q=zzqq"));
+    expect(await screen.findByDisplayValue("zzqq")).toBeInTheDocument();
   });
 
   it("lists what was looked at recently before anything is typed, each marked with its kind", async () => {
@@ -96,7 +108,7 @@ describe("the search palette", () => {
     useUI.getState().pushRecent({ kind: "proposal", pid: "20240311", name: "A proposal" });
     useUI.getState().pushRecent({ kind: "experiment", pid: "20240311-1", name: "An experiment" });
     const { user } = await renderApp("/datasets");
-    await user.click(await screen.findByRole("button", { name: "Search everything" }));
+    await user.click(await screen.findByRole("button", { name: "Quick access" }));
     await screen.findByText("Recent");
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Dataset")).toBeInTheDocument();
@@ -107,8 +119,8 @@ describe("the search palette", () => {
   it("a recent proposal opens the proposal, a recent dataset the dataset", async () => {
     useUI.getState().pushRecent({ kind: "proposal", pid: "20240311", name: "A proposal" });
     const { user } = await renderApp("/datasets");
-    await user.click(await screen.findByRole("button", { name: "Search everything" }));
-    await user.click(await screen.findByText("A proposal"));
+    await user.click(await screen.findByRole("button", { name: "Quick access" }));
+    await user.click(await within(await screen.findByRole("dialog")).findByText("A proposal"));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/proposals/20240311"));
   });
 });

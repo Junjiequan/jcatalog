@@ -26,13 +26,13 @@ export function KeywordFacet({ query, update, entry }: P) {
       </div>
       <div className="flex flex-wrap gap-1.5">
         {selected.map((k) => (
-          <button key={k} aria-pressed onClick={() => update({ keywords: selected.filter((x) => x !== k) })} className="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">
-            {k}<X className="h-3 w-3" />
+          <button key={k} aria-pressed onClick={() => update({ keywords: selected.filter((x) => x !== k) })} className="inline-flex max-w-full items-center gap-1 rounded-full border border-accent/50 bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent" title={k}>
+            <span className="max-w-[10rem] truncate">{k}</span><X className="h-3 w-3 shrink-0" />
           </button>
         ))}
         {found.map((o) => (
-          <button key={o.value} aria-pressed={false} onClick={() => (update({ keywords: [...selected, o.value] }), setText(""))} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-line-strong hover:text-fg">
-            {o.label}
+          <button key={o.value} aria-pressed={false} title={o.label} onClick={() => (update({ keywords: [...selected, o.value] }), setText(""))} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-line-strong hover:text-fg">
+            <span className="block max-w-[10rem] truncate" title={o.label}>{o.label}</span>
           </button>
         ))}
         {text && res && !found.length && <p className="py-1 text-xs text-subtle">Nothing matches “{text}”.</p>}

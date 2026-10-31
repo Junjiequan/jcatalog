@@ -1,13 +1,14 @@
-import { useEffect, useRef, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useAuth } from "@/store/auth";
 import { canCreateDatasets, useRole } from "@/lib/permissions";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import clsx from "clsx";
-import { Eye, EyeOff, Keyboard, LogOut, MoreHorizontal, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, ShoppingBasket, Sun } from "lucide-react";
+import { Eye, EyeOff, Keyboard, LogOut, MoreHorizontal, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, ShoppingBasket, Sun, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
 import { Menu, MenuItem, MenuLabel, MenuRadio, MenuSep, Tip } from "@/components/ui/Overlay";
 import { Logo } from "@/components/Thumb";
+import { DockProvider } from "@/components/SidePanel";
 import { NAV, MOD } from "./nav";
 import { CommandPalette } from "./CommandPalette";
 import { ConfirmHost, SelectionSheet, SelectionTray, ShortcutsDialog, ToastHost } from "./Overlays";
@@ -143,11 +144,19 @@ function Topbar() {
   // rendered, not hidden with a class: the Button's own display class would win over "hidden"
   const wide = useMediaQuery("(min-width: 640px)");
   return (
-    <header className="z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas/85 px-3 backdrop-blur-sm sm:gap-3 sm:px-5">
+    <header className="z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas px-3 sm:gap-3 sm:px-5">
       <Link to="/datasets" className="lg:hidden"><Logo className="h-8 w-8" /></Link>
-      {/* icon only, like Linear or Vercel: the page's own search box is the only place that looks like a field */}
-      <Tip label="Search everything" kbd={`${MOD}K`}>
-        <Button variant="ghost" size="icon" aria-label="Search everything" onClick={() => set({ paletteOpen: true })}><Search className="h-[18px] w-[18px]" /></Button>
+      {/* a pill, so it reads as something to press: the lightning mark, what it opens, and its shortcut on wider screens */}
+      <Tip label="Quick access" kbd={`${MOD}K`}>
+        <button
+          aria-label="Quick access"
+          onClick={() => set({ paletteOpen: true })}
+          className="group inline-flex h-10 items-center gap-2.5 rounded-full border border-line bg-surface p-1 pr-1 shadow-card transition-all hover:border-accent/60 hover:shadow-pop focus-visible:outline-2 focus-visible:outline-accent sm:pr-2.5"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[0_2px_8px_-2px_rgb(var(--accent)/0.6)] transition-transform group-hover:scale-105"><Zap className="h-4 w-4 group-hover:animate-zap motion-reduce:animate-none" strokeWidth={2.4} /></span>
+          {wide && <span className="text-sm text-muted transition-colors group-hover:text-fg">Quick access</span>}
+          {wide && <Kbd>{MOD}K</Kbd>}
+        </button>
       </Tip>
       <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
         {canCreateDatasets() && (wide ? (
@@ -249,6 +258,7 @@ function JobWatcher() {
 }
 
 export function AppShell() {
+  const [dock, setDock] = useState<HTMLElement | null>(null);
   const theme = useUI((s) => s.theme);
   const { pathname } = useLocation();
   useGlobalShortcuts();
@@ -262,13 +272,18 @@ export function AppShell() {
   }, [theme]);
 
   return (
+    <DockProvider value={dock}>
     <div className="flex h-dvh overflow-clip">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main key={pathname.split("/")[1]} className="min-h-0 flex-1 overflow-y-auto overflow-x-clip">
-          <Outlet />
-        </main>
+        <div className="flex min-h-0 flex-1">
+          <main key={pathname.split("/")[1]} className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip">
+            <Outlet />
+          </main>
+          {/* docked panels (a preview, the selection) sit here and push the page aside */}
+          <div ref={setDock} className="flex shrink-0" />
+        </div>
         <MobileNav />
       </div>
       <SelectionTray />
@@ -280,5 +295,6 @@ export function AppShell() {
       <ToastHost />
       <JobWatcher />
     </div>
+    </DockProvider>
   );
 }

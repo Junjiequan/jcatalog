@@ -275,6 +275,21 @@ run("proposals, samples, instruments, published data and jobs", () => {
     expect(total).toBe(p.datasetCount);
   });
 
+  it("a publication comes with the datasets it holds, and an unknown one is refused", async () => {
+    const [first] = await api.published.list();
+    const detail = await api.published.get(first.pid);
+    expect(detail.published.doi).toBe(first.doi);
+    expect(detail.datasets.map((d) => d.pid).sort()).toEqual([...first.datasetPids].sort());
+    await expect(api.published.get("no-such-pid")).rejects.toThrow();
+  });
+
+  it("samples can be narrowed to those with a dataset meeting a measurement", async () => {
+    const all = await api.samples.list();
+    const some = await api.samples.list({ conds: [{ key: "no_such_property", op: "eq", value: "1" }] });
+    expect(all.length).toBeGreaterThan(0);
+    expect(some).toHaveLength(0);
+  });
+
   it("lists samples and instruments with how much data each holds", async () => {
     expect((await api.samples.list()).every((s) => s.datasetCount >= 0)).toBe(true);
     const detail = await api.samples.get((await api.samples.list())[0].sampleId);

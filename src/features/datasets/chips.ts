@@ -1,6 +1,6 @@
 import { Atom, CalendarDays, FileText, FlaskConical, HardDrive, Layers, Microscope, Tag, type LucideIcon } from "lucide-react";
 import { api } from "@/api";
-import { fmtDate } from "@/lib/format";
+import { rangeLabel } from "@/lib/dateRange";
 import { describeCond } from "@/lib/query";
 import { MULTI_FIELDS, type DatasetQuery, type FacetField, type FilterGroup, type MultiField } from "@/types";
 
@@ -37,14 +37,14 @@ export function buildChips(q: DatasetQuery, update: (p: Partial<DatasetQuery>) =
       flipAt: k ? (j) => update({ and: { ...q.and, [k]: ands.includes(j) ? ands.filter((x) => x !== j) : [...ands, j] } }) : undefined,
     });
   };
-  multi("Type", "types");
+  // the type is not a chip: like the scope it is set from the toolbar and only named in words
   multi("Instrument", "instruments");
   multi("Technique", "techniques");
   multi("Proposal", "proposals");
   multi("Keyword", "keywords");
   multi("Availability", "storage");
   if (q.from || q.to) {
-    const text = q.from && q.to ? `${fmtDate(q.from)} – ${fmtDate(q.to)}` : q.from ? `since ${fmtDate(q.from)}` : `until ${fmtDate(q.to!)}`;
+    const text = rangeLabel(q.from, q.to);
     out.push({ id: "date", group: "Created", values: [{ id: "date", label: text, remove: () => update({ from: undefined, to: undefined }) }] });
   }
   if (q.conds.length) out.push({ id: "conds", group: "Measurement", values: q.conds.map((c, i) => ({ id: String(i), label: describeCond(c), remove: () => update({ conds: q.conds.filter((_, j) => j !== i) }) })) });

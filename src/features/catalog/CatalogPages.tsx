@@ -7,12 +7,17 @@ import { InstrumentChips, TechniqueChips, techniquesOf } from "@/components/Inst
 import { ClipRow } from "@/components/ui/Overlay";
 import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorState, ListToolbar, NoMatches, Page, PageHeader, Pager, ProgressBar, STICKY_PAGER, CardCheck, CardGrid, Segmented, Skeleton, Table, ViewOptions, cardCls, ViewSwitch, useShownColumns, type Column, type TableSelection } from "@/components/ui/Primitives";
-import { useSelection, type SelItem } from "@/store/selection";
+import { publishedItem, sampleItem, useSelection, type SelItem } from "@/store/selection";
+import { AppliedFilters, FilterToggle, ListFilters, useListFilter, type Fields } from "@/components/FilterShell";
+import { TagScopeProvider } from "@/components/tagScope";
+import { PeekSheet } from "@/components/PeekSheet";
+import { PublishedPeek } from "./PublishedPeek";
+import { SamplePeek } from "./SamplePeek";
 import { useUI } from "@/store/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Explain } from "@/components/ui/Overlay";
 import { api } from "@/api";
-import { useListView, usePaging } from "@/hooks/hooks";
+import { useListView, usePaging, usePeekParam, useSearchText } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { matchesSearch } from "@/lib/search";
 import { bus } from "@/lib/bus";
@@ -36,52 +41,73 @@ function useRowSelection<T>(toItem: (row: T) => SelItem): TableSelection<T> & { 
   };
 }
 
-export function SamplesPage() {
-  const { data, error, reload } = useResource(["samples"], () => api.samples.list());
-  const [q, setQ] = useState("");
-  const list = useMemo(() => (data ?? []).filter((s) => matchesSearch(q, s.sampleName, s.formula, s.description, Object.values(s.sampleCharacteristics))), [data, q]);
-  const pg = usePaging(list, q);
+// a tag clicked on a page finds more of what the page lists: other samples, other instruments…
+// what each page's filter panel offers, and so what its query is built from
+const SAMPLE_FILTERS: Fields = ["instruments", "conds"];
+const INSTRUMENT_FILTERS: Fields = ["instruments", "techniques"];
+const PUBLISHED_FILTERS: Fields = ["instruments", "techniques", "created"];
+export const SamplesPage = () => <TagScopeProvider value="samples"><ListFilters fields={SAMPLE_FILTERS}><SamplesList /></ListFilters></TagScopeProvider>;
+
+function SamplesList() {
+  const tags = useListFilter();
+  const conds = tags.query.conds;
+  const { data, error, reload } = useResource(["samples", JSON.stringify(conds)], () => api.samples.list({ conds }));
+  const [q, setQ] = useSearchText();
+  const list = useMemo(() => (data ?? []).filter((s) => tags.test({ instrumentIds: s.instrumentIds }) && matchesSearch(q, s.sampleName, s.formula, s.description, Object.values(s.sampleCharacteristics))), [data, q, tags]);
+  const pg = usePaging(list, `${q}|${tags.key}`);
+  // the sample whose preview is open (?peek=), and the one before and after it on this page
+  const [peek, setPeek] = usePeekParam();
+  const at = pg.items.findIndex((s) => s.sampleId === peek);
+  const step = (d: number) => (at + d >= 0 && at + d < pg.items.length ? () => setPeek(pg.items[at + d].sampleId) : undefined);
   const [view, setView] = useListView("samples", "cards");
   const show = useShownColumns("samples");
   const density = useUI((s) => s.density);
-  const sel = useRowSelection<(typeof list)[number]>((x) => ({ kind: "sample", id: `sample:${x.sampleId}`, name: x.sampleName, sub: x.formula || x.sampleId, link: `/datasets?scope=all&q=${encodeURIComponent(x.sampleName)}` }));
+  const sel = useRowSelection<(typeof list)[number]>(sampleItem);
   const nav = useNavigate();
   const cols: Column<(typeof list)[number]>[] = [
-              { key: "name", label: "Sample", className: "max-w-[280px]", render: (s) => <><div className="truncate font-medium group-hover:text-accent" title={s.sampleName}>{s.sampleName}</div>{s.formula && <div className="sub font-mono text-xs text-muted">{s.formula}</div>}</> },
-              { key: "desc", label: "Description", className: "max-w-[360px]", render: (s) => <span className="line-clamp-1 text-muted">{s.description}</span> },
-              { key: "chars", label: "Characteristics", className: "max-w-[320px]", render: (s) => <span className="line-clamp-1 text-xs text-muted">{Object.entries(s.sampleCharacteristics).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span> },
-              { key: "owner", label: "Group", className: "whitespace-nowrap", render: (s) => s.owner },
-              { key: "n", label: "Datasets", center: true, render: (s) => <span className="tnum font-semibold">{fmtNum(s.datasetCount)}</span> },
+              { key: "name", label: "Sample", render: (s) => <><div className="truncate font-medium group-hover:text-accent" title={s.sampleName}>{s.sampleName}</div>{s.formula && <div className="sub font-mono text-xs text-muted">{s.formula}</div>}</> },
+              { key: "desc", label: "Description", fit: { width: 240, rank: 3 }, className: "max-w-[360px]", render: (s) => <span className="line-clamp-1 text-muted">{s.description}</span> },
+              { key: "chars", label: "Characteristics", fit: { width: 240, rank: 4 }, className: "max-w-[320px]", render: (s) => <span className="line-clamp-1 text-xs text-muted">{Object.entries(s.sampleCharacteristics).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span> },
+              { key: "owner", label: "Group", fit: { width: 130, rank: 2 }, className: "whitespace-nowrap", render: (s) => s.owner },
+              { key: "n", label: "Datasets", fit: { width: 90, rank: 0 }, center: true, render: (s) => <span className="tnum font-semibold">{fmtNum(s.datasetCount)}</span> },
   ];
   return (
     <Page>
       <PageHeader title="Samples" subtitle="The materials behind your measurements." />
       <ListToolbar>
+        <FilterToggle place="start" />
         <SearchInput value={q} onChange={setQ} placeholder="Search samples by name, formula or property…" />
+        <FilterToggle place="end" />
         <ViewOptions page="samples" columns={cols} className="ml-auto" />
         <ViewSwitch value={view} onChange={setView} />
+        <AppliedFilters />
       </ListToolbar>
-      {error ? <ErrorState onRetry={reload} /> : !data ? <CardSkeletons /> : list.length === 0 ? <NoMatches query={q} noun="samples" onClear={() => setQ("")} /> : (
+      {error ? <ErrorState onRetry={reload} /> : !data ? <CardSkeletons /> : list.length === 0 ? <NoMatches query={q} filters={tags.active} noun="samples" onClear={() => { setQ(""); tags.clear(); }} /> : (
         <>
         {view === "cards" ? (
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
           {pg.items.map((s) => (
-            <div key={s.sampleId} className={cardCls(sel.checked(s), "flex flex-col p-5")}>
+            // a mouse shortcut for the preview; the Preview button in the footer is the keyboard way
+            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+            <div key={s.sampleId} onClick={() => setPeek(s.sampleId)} className={cardCls(sel.checked(s), clsx("flex cursor-pointer flex-col p-5", peek === s.sampleId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(s)} onChange={() => sel.toggle(s)} label={`Select ${s.sampleName}`} className="-right-2 -top-2" />
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><FlaskConical className="h-5 w-5" /></span>
                 <div className="min-w-0">
-                  <h3 className="text-[15px] font-semibold leading-snug">{s.sampleName}</h3>
-                  {s.formula && <div className="mt-0.5 font-mono text-xs text-muted">{s.formula}</div>}
+                  <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug" title={s.sampleName}>{s.sampleName}</h3>
+                  {s.formula && <div className="mt-0.5 truncate font-mono text-xs text-muted" title={s.formula}>{s.formula}</div>}
                 </div>
               </div>
-              <p className="mt-3 text-[13px] text-muted">{s.description}</p>
+              <p className="mt-3 line-clamp-3 text-[13px] text-muted">{s.description}</p>
               <dl className="mt-3 mb-4 space-y-1 text-[13px]">
                 {Object.entries(s.sampleCharacteristics).map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-subtle">{k}</dt><dd className="text-right font-medium">{v}</dd></div>)}
               </dl>
               <div className="mt-auto flex items-center justify-between border-t border-line pt-3">
                 <span className="tnum text-[13px] text-muted">{plural(s.datasetCount, "dataset")}</span>
-                <Link to={`/datasets?scope=all&q=${encodeURIComponent(s.sampleName)}`} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Browse data <ArrowRight className="h-3.5 w-3.5" /></Link>
+                <span className="flex items-center gap-3">
+                  <button onClick={(e) => (e.stopPropagation(), setPeek(s.sampleId))} className="text-[13px] font-medium text-muted hover:text-accent hover:underline">Preview</button>
+                  <Link to={`/samples/${encodeURIComponent(s.sampleId)}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Open sample <ArrowRight className="h-3.5 w-3.5" /></Link>
+                </span>
               </div>
             </div>
           ))}
@@ -92,7 +118,9 @@ export function SamplesPage() {
             density={density}
             rowKey={(s) => s.sampleId}
             selection={sel}
-            onRow={(s) => nav(`/datasets?scope=all&q=${encodeURIComponent(s.sampleName)}`)}
+            onRow={(s) => setPeek(s.sampleId)}
+            onRowDoubleClick={(s) => nav(`/samples/${encodeURIComponent(s.sampleId)}`)}
+            active={(s) => s.sampleId === peek}
             columns={show(cols)}
             phoneSummary={(s) => <ClipRow className="tnum mt-1 text-xs text-muted" title="Details">{[s.description, s.owner, plural(s.datasetCount, "dataset")].filter(Boolean).join(" · ")}</ClipRow>}
           />
@@ -100,6 +128,7 @@ export function SamplesPage() {
         <Pager className={STICKY_PAGER} from={pg.from} to={pg.to} totalLabel={list.length} page={pg.page} totalPages={pg.totalPages} hasMore={pg.hasMore} pageSize={pg.pageSize} onPage={pg.setPage} onPageSize={pg.setPageSize} />
         </>
       )}
+          <PeekSheet open={!!peek} onClose={() => setPeek(null)} onPrev={step(-1)} onNext={step(1)}>{peek && <SamplePeek id={peek} />}</PeekSheet>
     </Page>
   );
 }
@@ -141,21 +170,24 @@ const JobStatusBadge = ({ status }: { status: JobStatus }) => {
 const isActive = isActiveJob;
 const isFailed = isFailedJob;
 
-export function InstrumentsPage() {
+export const InstrumentsPage = () => <TagScopeProvider value="instruments"><ListFilters fields={INSTRUMENT_FILTERS}><InstrumentsList /></ListFilters></TagScopeProvider>;
+
+function InstrumentsList() {
   const { data, error, reload } = useResource(["instruments"], () => api.instruments.list());
-  const [q, setQ] = useState("");
-  const list = useMemo(() => (data ?? []).filter((i) => matchesSearch(q, i.name, i.title, i.kind, i.location, i.description, i.techniques, STATUS[i.status].label)), [data, q]);
+  const [q, setQ] = useSearchText();
+  const tags = useListFilter();
+  const list = useMemo(() => (data ?? []).filter((i) => tags.test({ instrumentIds: [i.pid], techniques: i.techniques }) && matchesSearch(q, i.name, i.title, i.kind, i.location, i.description, i.techniques, STATUS[i.status].label)), [data, q, tags]);
   const [view, setView] = useListView("instruments", "cards");
   const show = useShownColumns("instruments");
   const density = useUI((s) => s.density);
   const cols: Column<(typeof list)[number]>[] = [
-            { key: "name", label: "Instrument", className: "max-w-[280px]", render: (i) => <><div className="truncate font-medium group-hover:text-accent">{i.name}</div><div className="sub truncate text-xs text-muted" title={i.title}>{i.title}</div></> },
-            { key: "kind", label: "Kind", className: "whitespace-nowrap", render: (i) => i.kind },
-            { key: "loc", label: "Location", className: "whitespace-nowrap", render: (i) => i.location },
-            { key: "tech", label: "Techniques", render: (i) => <TechniqueChips names={i.techniques} /> },
-            { key: "status", label: "Status", render: (i) => <StatusBadge status={i.status} /> },
-            { key: "last", label: "Last run", className: "whitespace-nowrap", render: (i) => (i.lastRun ? fmtDate(i.lastRun) : "—") },
-            { key: "n", label: "Datasets", center: true, render: (i) => <span className="tnum font-semibold">{fmtNum(i.datasetCount)}</span> },
+            { key: "name", label: "Instrument", render: (i) => <><div className="truncate font-medium group-hover:text-accent">{i.name}</div><div className="sub truncate text-xs text-muted" title={i.title}>{i.title}</div></> },
+            { key: "kind", label: "Kind", fit: { width: 120, rank: 3 }, className: "whitespace-nowrap", render: (i) => i.kind },
+            { key: "loc", label: "Location", fit: { width: 190, rank: 4 }, className: "whitespace-nowrap", render: (i) => i.location },
+            { key: "tech", label: "Techniques", fit: { width: 255, rank: 2 }, render: (i) => <TechniqueChips names={i.techniques} nowrap max={2} /> },
+            { key: "status", label: "Status", fit: { width: 110, rank: 1 }, render: (i) => <StatusBadge status={i.status} /> },
+            { key: "last", label: "Last run", fit: { width: 120, rank: 5 }, className: "whitespace-nowrap", render: (i) => (i.lastRun ? fmtDate(i.lastRun) : "—") },
+            { key: "n", label: "Datasets", fit: { width: 90, rank: 0 }, center: true, render: (i) => <span className="tnum font-semibold">{fmtNum(i.datasetCount)}</span> },
   ];
   const sel = useRowSelection<(typeof list)[number]>((x) => ({ kind: "instrument", id: `instrument:${x.pid}`, name: x.name, sub: x.title, link: `/datasets?scope=all&inst=${x.pid}` }));
   const nav = useNavigate();
@@ -164,11 +196,14 @@ export function InstrumentsPage() {
     <Page wide>
       <PageHeader title="Instruments" subtitle="The ESS neutron instrument suite — and what each has produced." />
       <ListToolbar>
+        <FilterToggle place="start" />
         <SearchInput value={q} onChange={setQ} placeholder="Search instruments by name, technique or status…" />
+        <FilterToggle place="end" />
         <ViewOptions page="instruments" columns={cols} className="ml-auto" />
         <ViewSwitch value={view} onChange={setView} />
+        <AppliedFilters />
       </ListToolbar>
-      {error ? <ErrorState onRetry={reload} /> : !data ? <CardSkeletons /> : list.length === 0 ? <NoMatches query={q} noun="instruments" onClear={() => setQ("")} /> : (
+      {error ? <ErrorState onRetry={reload} /> : !data ? <CardSkeletons /> : list.length === 0 ? <NoMatches query={q} filters={tags.active} noun="instruments" onClear={() => { setQ(""); tags.clear(); }} /> : (
         <>
         {view === "cards" ? (
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
@@ -218,39 +253,49 @@ export function InstrumentsPage() {
   );
 }
 
-export function PublishedPage() {
+export const PublishedPage = () => <TagScopeProvider value="published"><ListFilters fields={PUBLISHED_FILTERS}><PublishedList /></ListFilters></TagScopeProvider>;
+
+function PublishedList() {
   const { data, error, reload } = useResource(["published"], () => api.published.list());
-  const [q, setQ] = useState("");
-  const list = useMemo(() => (data ?? []).filter((p) => matchesSearch(q, p.title, p.doi, p.metadata.creators.map((c) => c.name), p.abstract, p.metadata.publicationYear, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))), [data, q]);
-  const pg = usePaging(list, q);
+  const [q, setQ] = useSearchText();
+  const tags = useListFilter();
+  const list = useMemo(() => (data ?? []).filter((p) => tags.test({ instrumentIds: p.instrumentIds, techniques: techniquesOf(p.instrumentIds) }) && (!tags.query.from || p.registeredTime.slice(0, 10) >= tags.query.from) && (!tags.query.to || p.registeredTime.slice(0, 10) <= tags.query.to) && matchesSearch(q, p.title, p.doi, p.metadata.creators.map((c) => c.name), p.abstract, p.metadata.publicationYear, p.instrumentIds.map((id) => api.options.instruments().find((x) => x.pid === id)?.name ?? id))), [data, q, tags]);
+  const pg = usePaging(list, `${q}|${tags.key}`);
   const [view, setView] = useListView("published", "cards");
   const show = useShownColumns("published");
   const density = useUI((s) => s.density);
   const cols: Column<(typeof list)[number]>[] = [
-              { key: "title", label: "Title", className: "max-w-[420px]", render: (p) => <><div className="line-clamp-1 font-medium group-hover:text-accent">{p.title}</div><div className="sub line-clamp-1 text-xs text-muted">{p.metadata.creators.map((c) => c.name).join(", ")}</div></> },
-              { key: "instruments", label: "Instruments", className: "whitespace-nowrap", render: (p) => <InstrumentChips ids={p.instrumentIds} max={2} nowrap size="sm" /> },
-              { key: "techniques", label: "Techniques", className: "whitespace-nowrap", render: (p) => <TechniqueChips names={techniquesOf(p.instrumentIds)} nowrap /> },
-              { key: "year", label: "Year", render: (p) => p.metadata.publicationYear },
-              { key: "doi", label: "DOI", className: "whitespace-nowrap font-mono text-xs", render: (p) => <a href={`https://doi.org/${p.doi}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline">{p.doi}</a> },
-              { key: "n", label: "Datasets", center: true, render: (p) => <span className="tnum">{p.datasetPids.length}</span> },
-              { key: "size", label: "Size", right: true, className: "whitespace-nowrap", render: (p) => <span className="tnum">{fmtBytes(p.sizeOfArchive)}</span> },
-              { key: "dl", label: "Downloads", right: true, render: (p) => <span className="tnum">{fmtNum(p.downloads)}</span> },
-              { key: "views", label: "Views", right: true, render: (p) => <span className="tnum">{fmtNum(p.views)}</span> },
+              { key: "title", label: "Title", render: (p) => <><div className="line-clamp-1 font-medium group-hover:text-accent">{p.title}</div><div className="sub line-clamp-1 text-xs text-muted">{p.metadata.creators.map((c) => c.name).join(", ")}</div></> },
+              { key: "instruments", label: "Instruments", fit: { width: 190, rank: 3 }, className: "whitespace-nowrap", render: (p) => <InstrumentChips ids={p.instrumentIds} max={2} nowrap size="sm" /> },
+              { key: "techniques", label: "Techniques", fit: { width: 255, rank: 5 }, className: "whitespace-nowrap", render: (p) => <TechniqueChips names={techniquesOf(p.instrumentIds)} nowrap max={2} /> },
+              { key: "year", label: "Year", fit: { width: 70, rank: 2 }, render: (p) => p.metadata.publicationYear },
+              { key: "doi", label: "DOI", fit: { width: 230, rank: 4 }, className: "whitespace-nowrap font-mono text-xs", render: (p) => <a href={`https://doi.org/${p.doi}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline">{p.doi}</a> },
+              { key: "n", label: "Datasets", fit: { width: 90, rank: 0 }, center: true, render: (p) => <span className="tnum">{p.datasetPids.length}</span> },
+              { key: "size", label: "Size", fit: { width: 90, rank: 6 }, right: true, className: "whitespace-nowrap", render: (p) => <span className="tnum">{fmtBytes(p.sizeOfArchive)}</span> },
+              { key: "dl", label: "Downloads", fit: { width: 100, rank: 7 }, right: true, render: (p) => <span className="tnum">{fmtNum(p.downloads)}</span> },
+              { key: "views", label: "Views", fit: { width: 80, rank: 8 }, right: true, render: (p) => <span className="tnum">{fmtNum(p.views)}</span> },
   ];
-  const sel = useRowSelection<(typeof list)[number]>((x) => ({ kind: "published", id: `doi:${x.doi}`, name: x.title, sub: x.doi, link: `/datasets?scope=public&prop=${x.doi.split(".").pop()}` }));
+  const sel = useRowSelection<(typeof list)[number]>(publishedItem);
+  // the publication whose preview is open (?peek=), and the one before and after it on this page
+  const [peek, setPeek] = usePeekParam();
+  const at = pg.items.findIndex((p) => p.pid === peek);
+  const step = (d: number) => (at + d >= 0 && at + d < pg.items.length ? () => setPeek(pg.items[at + d].pid) : undefined);
   const nav = useNavigate();
   return (
     <Page>
       <PageHeader title="Published data" subtitle="Openly available datasets with permanent, citable DOIs." />
       <ListToolbar>
+        <FilterToggle place="start" />
         <SearchInput value={q} onChange={setQ} placeholder="Search published data by title, author or DOI…" />
+        <FilterToggle place="end" />
         <ViewOptions page="published" columns={cols} className="ml-auto" />
         <ViewSwitch value={view} onChange={setView} />
+        <AppliedFilters />
       </ListToolbar>
       {error ? <ErrorState onRetry={reload} /> : !data ? <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-xl" />)}</div> : data.length === 0 ? (
         <EmptyState icon={Globe} title="Nothing published yet" description="Publish a dataset from its detail page to give it a DOI." />
       ) : list.length === 0 ? (
-        <NoMatches query={q} noun="published data" onClear={() => setQ("")} />
+        <NoMatches query={q} filters={tags.active} noun="published data" onClear={() => { setQ(""); tags.clear(); }} />
       ) : (
         <>
         {view === "cards" ? (
@@ -258,7 +303,8 @@ export function PublishedPage() {
           {pg.items.map((p) => {
             const citation = `${p.metadata.creators.map((c) => c.name).join(", ")} (${p.metadata.publicationYear}). ${p.title}. ${p.metadata.publisher.name}. https://doi.org/${p.doi}`;
             return (
-              <article key={p.doi} className={cardCls(sel.checked(p), "flex flex-col p-6")}>
+              // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+              <article key={p.doi} onClick={() => setPeek(p.pid)} className={cardCls(sel.checked(p) || p.pid === peek, "flex cursor-pointer flex-col p-6")}>
                 <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.title}`} className="-right-2 -top-2" />
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted"><Explain title="Open access" text="Published under a permanent DOI. Anyone can find, cite and download these datasets, no account needed." icon={Globe}><span className="inline-flex cursor-help"><Badge tone="success" icon={Globe}>Open access</Badge></span></Explain><span>{p.metadata.publicationYear}</span><span>·</span><a href={`https://doi.org/${p.doi}`} target="_blank" rel="noreferrer" className="font-mono text-accent hover:underline">{p.doi}</a></div>
                 <h3 className="mt-2 line-clamp-2 min-h-[3.1rem] text-lg font-semibold leading-snug" title={p.title}>{p.title}</h3>
@@ -273,7 +319,8 @@ export function PublishedPage() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button size="sm" onClick={() => (navigator.clipboard?.writeText(citation), toast.success("Citation copied", { description: "Paste it straight into your reference list." }))}><Quote className="h-3.5 w-3.5" />Cite</Button>
-                    <Link to={`/datasets?scope=public&prop=${p.doi.split(".").pop()}`}><Button size="sm" variant="primary">Browse datasets</Button></Link>
+                    <Button size="sm" onClick={(e) => (e.stopPropagation(), setPeek(p.pid))}>Preview</Button>
+                    <Link to={`/published/${encodeURIComponent(p.pid)}`} onClick={(e) => e.stopPropagation()}><Button size="sm" variant="primary">Open publication</Button></Link>
                   </div>
                 </div>
               </article>
@@ -286,7 +333,9 @@ export function PublishedPage() {
             density={density}
             rowKey={(p) => p.doi}
             selection={sel}
-            onRow={(p) => nav(`/datasets?scope=public&prop=${p.doi.split(".").pop()}`)}
+            onRow={(p) => setPeek(p.pid)}
+            onRowDoubleClick={(p) => nav(`/published/${encodeURIComponent(p.pid)}`)}
+            active={(p) => p.pid === peek}
             columns={show(cols)}
             phoneSummary={(p) => (
               <>
@@ -299,6 +348,7 @@ export function PublishedPage() {
         <Pager className={STICKY_PAGER} from={pg.from} to={pg.to} totalLabel={list.length} page={pg.page} totalPages={pg.totalPages} hasMore={pg.hasMore} pageSize={pg.pageSize} onPage={pg.setPage} onPageSize={pg.setPageSize} />
         </>
       )}
+      <PeekSheet open={!!peek} onClose={() => setPeek(null)} onPrev={step(-1)} onNext={step(1)}>{peek && <PublishedPeek id={peek} />}</PeekSheet>
     </Page>
   );
 }

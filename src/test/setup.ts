@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+
+// a wait ends the moment its condition holds; the limit only matters when the machine is busy (the graph layout, a full run)
+configure({ asyncUtilTimeout: 4000 });
 
 // the DOM is emptied between tests, so one test never sees another's screen
 afterEach(cleanup);

@@ -1,4 +1,4 @@
-import type {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, Instrument, Job, MetaKeyInfo, Proposal, PublishedData, Sample, Attachment, AuthResult, AuthUser, DemoAccount, SignUpInput} from "@/types";
+import type {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, Instrument, Job, MetaCond, MetaKeyInfo, Proposal, PublishedData, Sample, Attachment, AuthResult, AuthUser, DemoAccount, SignUpInput} from "@/types";
 
 // The contract the UI programs against. Every screen talks to this and nothing else, so swapping the
 // adapter (mock today, SciCat tomorrow) touches no component. The mock is in /mock (delete that folder to remove all dummy data); the backend is ./scicat.
@@ -54,7 +54,13 @@ export interface ProposalDetail {
   size: number;
   recent: Dataset[];
 }
-export type SampleSummary = Sample & { datasetCount: number };
+// the instruments and techniques a sample has been measured with: what a tag filter on the samples list needs
+export type SampleSummary = Sample & { datasetCount: number; instrumentIds: string[]; techniques: string[] };
+// a publication with the datasets it holds
+export interface PublishedDetail {
+  published: PublishedData;
+  datasets: Dataset[];
+}
 export interface SampleDetail {
   sample: Sample;
   datasetCount: number;
@@ -116,9 +122,10 @@ export interface CatalogApi {
     list(): Promise<ProposalSummary[]>;
     get(id: string): Promise<ProposalDetail>;
   };
-  samples: { list(): Promise<SampleSummary[]>; get(id: string): Promise<SampleDetail> };
+  // `conds`: only samples with a dataset that meets every measurement condition
+  samples: { list(opts?: { conds?: MetaCond[] }): Promise<SampleSummary[]>; get(id: string): Promise<SampleDetail> };
   instruments: { list(): Promise<InstrumentSummary[]> };
-  published: { list(): Promise<PublishedData[]> };
+  published: { list(): Promise<PublishedData[]>; get(pid: string): Promise<PublishedDetail> };
   jobs: {
     list(): Promise<Job[]>;
     retry(id: string): Promise<void>;

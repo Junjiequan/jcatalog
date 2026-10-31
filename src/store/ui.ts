@@ -8,14 +8,21 @@ export type View = "table" | "grid";
 export type ListView = "table" | "cards";
 export type ColumnKey = "runNumber" | "keywords" | "instrument" | "technique" | "proposal" | "sample" | "type" | "created" | "size" | "files" | "owner";
 
+// Searches are saved per kind of list. Datasets are the only kind so far; add a kind here (its tab title and the page that
+// applies it) and the Settings tab, and saving from that page, follow.
+export type SearchKind = "datasets";
+export const SEARCH_KINDS: Record<SearchKind, { label: string; noun: string; path: string }> = { datasets: { label: "Datasets", noun: "dataset", path: "/datasets" } };
 export interface SavedSearch {
   id: string;
   name: string;
   qs: string;
+  // searches saved before there were kinds have none, and are dataset searches
+  kind?: SearchKind;
 }
+export const kindOf = (s: SavedSearch): SearchKind => s.kind ?? "datasets";
 // what was opened; items saved before proposals were recorded have no kind and are datasets
 export interface RecentItem {
-  kind?: "dataset" | "proposal" | "experiment";
+  kind?: "dataset" | "proposal" | "experiment" | "sample" | "published";
   pid: string;
   name: string;
 }
@@ -51,7 +58,8 @@ interface UIState {
   set: (patch: Partial<UIState>) => void;
   toggleColumn: (k: ColumnKey) => void;
   pushRecent: (r: RecentItem) => void;
-  saveSearch: (name: string, qs: string) => void;
+  clearRecent: () => void;
+  saveSearch: (name: string, qs: string, kind?: SearchKind) => void;
   deleteSearch: (id: string) => void;
   updateSearch: (id: string, patch: Partial<Pick<SavedSearch, "name" | "qs">>) => void;
 }
@@ -81,8 +89,9 @@ export const useUI = create<UIState>()(
       mobileFiltersOpen: false,
       set: (patch) => set(patch),
       toggleColumn: (k) => set((s) => ({ columns: { ...s.columns, [k]: !s.columns[k] } })),
+      clearRecent: () => set({ recent: [] }),
       pushRecent: (r) => set((s) => ({ recent: [r, ...s.recent.filter((x) => x.pid !== r.pid || (x.kind ?? "dataset") !== (r.kind ?? "dataset"))].slice(0, appConfig().recentlyViewed) })),
-      saveSearch: (name, qs) => set((s) => ({ savedSearches: [...s.savedSearches, { id: crypto.randomUUID(), name, qs }] })),
+      saveSearch: (name, qs, kind = "datasets") => set((s) => ({ savedSearches: [...s.savedSearches, { id: crypto.randomUUID(), name, qs, kind }] })),
       deleteSearch: (id) => set((s) => ({ savedSearches: s.savedSearches.filter((x) => x.id !== id) })),
       updateSearch: (id, patch) => set((s) => ({ savedSearches: s.savedSearches.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
     }),

@@ -84,15 +84,20 @@ describe("the other filters", () => {
     await user.click(chips()[0]);
     await waitFor(() => expect(where()).toMatch(/kw=/));
   });
+});
 
-  it("the type and storage toggles filter", async () => {
+describe("the type switch in the toolbar", () => {
+  it("is not in the filter panel, and Derived narrows the list to derived datasets", async () => {
     const { user } = await openList();
-    await expand(user, "Type");
-    const derived = (await screen.findAllByRole("button", { name: /^Derived/ })).find((b) => b.hasAttribute("aria-pressed"))!;
-    await user.click(derived);
+    expect(screen.queryByRole("button", { name: /^(Collapse|Expand) Type$/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Type" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Derived" }));
     await waitFor(() => expect(where()).toContain("type=derived"));
     await waitFor(() => expect(rows().length).toBeGreaterThan(0));
     for (const r of rows()) expect(within(r).getByText("Derived")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Derived" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Any" }));
+    await waitFor(() => expect(where()).not.toContain("type="));
   });
 });
 
@@ -139,7 +144,8 @@ describe("sections and clearing", () => {
 
   it("the filter count on the button follows the filters", async () => {
     await openList("?scope=all&tech=SANS&type=derived");
-    expect(await screen.findByRole("button", { name: /Filters/ })).toHaveTextContent("2");
+    // the type switch is in the toolbar, so only the technique counts
+    expect(await screen.findByRole("button", { name: /Filters/ })).toHaveTextContent("1");
   });
 });
 
@@ -161,5 +167,21 @@ describe("saved searches", () => {
     const { user } = await openList();
     await user.click(await screen.findByRole("button", { name: "Delete Old search" }));
     await waitFor(() => expect(useUI.getState().savedSearches).toHaveLength(0));
+  });
+});
+
+describe("renaming a saved search", () => {
+  it("the save button applies the typed name, and is off until the name changes", async () => {
+    useUI.setState({ savedSearches: [{ id: "s1", name: "Cold SANS", qs: "scope=all&tech=SANS" }] });
+    const { user } = await openList();
+    await user.click(await screen.findByRole("button", { name: /Preview/ }));
+    const save = await screen.findByRole("button", { name: "Save the name" });
+    expect(save).toBeDisabled();
+    const box = screen.getByLabelText("Saved search name");
+    await user.clear(box);
+    await user.type(box, "Warm SANS");
+    expect(save).toBeEnabled();
+    await user.click(save);
+    await waitFor(() => expect(useUI.getState().savedSearches[0].name).toBe("Warm SANS"));
   });
 });

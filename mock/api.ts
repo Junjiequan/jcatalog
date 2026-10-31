@@ -473,9 +473,13 @@ export const mockApi: CatalogApi = {
     },
   },
   samples: {
-    async list(): Promise<(Sample & { datasetCount: number })[]> {
+    async list(opts?: { conds?: MetaCond[] }): Promise<(Sample & { datasetCount: number; instrumentIds: string[]; techniques: string[] })[]> {
       await lag();
-      return SAMPLES.map((s) => ({ ...s, datasetCount: datasets.filter((d) => d.sampleId === s.sampleId && inScope(d, "all")).length }));
+      const conds = opts?.conds ?? [];
+      return SAMPLES.filter((s) => !conds.length || datasets.some((d) => d.sampleId === s.sampleId && conds.every((c) => condOk(d, c)))).map((s) => {
+        const sets = datasets.filter((d) => d.sampleId === s.sampleId && inScope(d, "all"));
+        return { ...s, datasetCount: sets.length, instrumentIds: [...new Set(sets.flatMap((d) => d.instrumentIds))], techniques: [...new Set(sets.flatMap((d) => techniqueNames(d)))].sort() };
+      });
     },
     async get(id: string) {
       await lag();
@@ -506,6 +510,12 @@ export const mockApi: CatalogApi = {
     async list(): Promise<PublishedData[]> {
       await lag();
       return published;
+    },
+    async get(pid: string) {
+      await lag();
+      const p = published.find((x) => x.pid === pid || x.doi === pid);
+      if (!p) throw new Error("Publication not found.");
+      return { published: p, datasets: datasets.filter((d) => p.datasetPids.includes(d.pid)) };
     },
   },
   jobs: {

@@ -15,13 +15,13 @@ Open http://localhost:4500.
 
 ## Develop
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | dev server on http://localhost:4500 |
-| `npm run check` | types, lint and tests with a coverage floor: what CI runs (about 12 seconds) |
-| `npm test` / `npm run test:watch` | about 290 tests in 7 seconds: [Vitest](https://vitest.dev) and Testing Library on happy-dom, next to the code (`*.test.ts(x)`). Pure logic is unit-tested; the pages are tested the way a person uses them, against the mock backend (`src/test/app.tsx` renders the whole app) |
-| `npm run test:coverage` | the same with coverage; fails below the floor set in `vite.config.ts` (about 79% of lines today) |
-| `npm run lint` | [oxlint](https://oxc.rs): correctness, React, hooks and accessibility rules (`.oxlintrc.json`) |
+| Command                           | What it does                                                                                                                                                                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                     | dev server on http://localhost:4500                                                                                                                                                                                                                                             |
+| `npm run check`                   | types, lint and tests with a coverage floor: what CI runs (about 12 seconds)                                                                                                                                                                                                    |
+| `npm test` / `npm run test:watch` | about 320 tests in 7 seconds: [Vitest](https://vitest.dev) and Testing Library on happy-dom, next to the code (`*.test.ts(x)`). Pure logic is unit-tested; the pages are tested the way a person uses them, against the mock backend (`src/test/app.tsx` renders the whole app) |
+| `npm run test:coverage`           | the same with coverage; fails below the floor set in `vite.config.ts` (about 79% of lines today)                                                                                                                                                                                |
+| `npm run lint`                    | [oxlint](https://oxc.rs): correctness, React, hooks and accessibility rules (`.oxlintrc.json`)                                                                                                                                                                                  |
 
 Where things are:
 
@@ -50,7 +50,7 @@ Open http://localhost:4500. Your source folder is mounted into the container, so
 
 ## Live site
 
-Every push to `master` also publishes the app to GitHub Pages: https://junjiequan.github.io/jcatalog/
+Every push to `main` also publishes the app to GitHub Pages: https://junjiequan.github.io/jcatalog/
 
 ## Data
 
