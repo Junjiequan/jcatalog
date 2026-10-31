@@ -146,15 +146,6 @@ describe("one value of an applied filter", () => {
   });
 });
 
-describe("cards", () => {
-  it("a proposal card previews on click and opens on double click or Enter", async () => {
-    const { user } = await renderApp("/proposals");
-    const title = (await screen.findAllByRole("heading", { level: 3 }))[0];
-    await user.dblClick(title);
-    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/\/proposals\/.+/));
-  });
-});
-
 describe("picking again closes", () => {
   it("clicking the card that is previewed closes its preview", async () => {
     const { user } = await renderApp("/samples");

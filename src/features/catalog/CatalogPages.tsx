@@ -17,7 +17,7 @@ import { useUI } from "@/store/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Explain } from "@/components/ui/Overlay";
 import { api } from "@/api";
-import { useListView, usePaging, usePeekParam, useRowClicks, useSearchText } from "@/hooks/hooks";
+import { useListView, usePaging, usePeekParam, useSearchText } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { matchesSearch } from "@/lib/search";
 import { bus } from "@/lib/bus";
@@ -63,8 +63,6 @@ function SamplesList() {
   const show = useShownColumns("samples");
   const density = useUI((s) => s.density);
   const sel = useRowSelection<(typeof list)[number]>(sampleItem);
-  const nav = useNavigate();
-  const clicks = useRowClicks(peek, setPeek, (id) => nav(`/samples/${encodeURIComponent(id)}`));
   const cols: Column<(typeof list)[number]>[] = [
               { key: "name", label: "Sample", render: (s) => <><div className="truncate font-medium group-hover:text-accent" title={s.sampleName}>{s.sampleName}</div>{s.formula && <div className="sub font-mono text-xs text-muted">{s.formula}</div>}</> },
               { key: "desc", label: "Description", fit: { width: 240, rank: 3 }, className: "max-w-[360px]", render: (s) => <span className="line-clamp-1 text-muted">{s.description}</span> },
@@ -91,7 +89,7 @@ function SamplesList() {
             // a mouse shortcut for the preview; the Preview button in the footer is the keyboard way
             // the card is a mouse target with a key way in (Enter), so it takes focus
             // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex
-            <div key={s.sampleId} onClick={(e) => clicks.click(s.sampleId, e)} onDoubleClick={() => clicks.dbl(s.sampleId)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(`/samples/${encodeURIComponent(s.sampleId)}`)} className={cardCls(sel.checked(s), clsx("flex cursor-pointer flex-col p-5", peek === s.sampleId && "border-accent ring-2 ring-accent/25"))}>
+            <div key={s.sampleId} onClick={() => setPeek(s.sampleId)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setPeek(s.sampleId)} className={cardCls(sel.checked(s), clsx("flex cursor-pointer flex-col p-5", peek === s.sampleId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(s)} onChange={() => sel.toggle(s)} label={`Select ${s.sampleName}`} className="-right-2 -top-2" />
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><FlaskConical className="h-5 w-5" /></span>
@@ -116,8 +114,7 @@ function SamplesList() {
             density={density}
             rowKey={(s) => s.sampleId}
             selection={sel}
-            onRow={(s, e) => clicks.click(s.sampleId, e)}
-            onRowDoubleClick={(s) => clicks.dbl(s.sampleId)}
+            onRow={(s) => setPeek(s.sampleId)}
             active={(s) => s.sampleId === peek}
             columns={show(cols)}
             phoneSummary={(s) => <ClipRow className="tnum mt-1 text-xs text-muted" title="Details">{[s.description, s.owner, plural(s.datasetCount, "dataset")].filter(Boolean).join(" · ")}</ClipRow>}
@@ -278,8 +275,6 @@ function PublishedList() {
   const [peek, setPeek] = usePeekParam();
   const at = pg.items.findIndex((p) => p.pid === peek);
   const step = (d: number) => (at + d >= 0 && at + d < pg.items.length ? () => setPeek(pg.items[at + d].pid) : undefined);
-  const nav = useNavigate();
-  const clicks = useRowClicks(peek, setPeek, (id) => nav(`/published/${encodeURIComponent(id)}`));
   return (
     <Page>
       <PageHeader title="Published data" subtitle="Openly available datasets with permanent, citable DOIs." />
@@ -303,7 +298,7 @@ function PublishedList() {
             const citation = `${p.metadata.creators.map((c) => c.name).join(", ")} (${p.metadata.publicationYear}). ${p.title}. ${p.metadata.publisher.name}. https://doi.org/${p.doi}`;
             return (
               // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex
-              <article key={p.doi} onClick={(e) => clicks.click(p.pid, e)} onDoubleClick={() => clicks.dbl(p.pid)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(`/published/${encodeURIComponent(p.pid)}`)} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-6", p.pid === peek && "border-accent ring-2 ring-accent/25"))}>
+              <article key={p.doi} onClick={() => setPeek(p.pid)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setPeek(p.pid)} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-6", p.pid === peek && "border-accent ring-2 ring-accent/25"))}>
                 <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.title}`} className="-right-2 -top-2" />
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted"><Explain title="Open access" text="Published under a permanent DOI. Anyone can find, cite and download these datasets, no account needed." icon={Globe}><span className="inline-flex cursor-help"><Badge tone="success" icon={Globe}>Open access</Badge></span></Explain><span>{p.metadata.publicationYear}</span><span>·</span><a href={`https://doi.org/${p.doi}`} target="_blank" rel="noreferrer" className="font-mono text-accent hover:underline">{p.doi}</a></div>
                 <h3 className="mt-2 line-clamp-2 min-h-[3.1rem] text-lg font-semibold leading-snug" title={p.title}>{p.title}</h3>
@@ -330,8 +325,7 @@ function PublishedList() {
             density={density}
             rowKey={(p) => p.doi}
             selection={sel}
-            onRow={(p, e) => clicks.click(p.pid, e)}
-            onRowDoubleClick={(p) => clicks.dbl(p.pid)}
+            onRow={(p) => setPeek(p.pid)}
             active={(p) => p.pid === peek}
             columns={show(cols)}
             phoneSummary={(p) => (

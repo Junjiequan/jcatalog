@@ -135,12 +135,11 @@ export function SelectCheck({ checked, onChange, label, className }: { checked: 
 // The one table every page shares, Datasets included: flat, white, edge to edge. Optional: a selection column,
 // sortable headers, an "active" row (open in a side panel) and a trailing affordance. On phones rows stack into
 // label/value lines unless `phoneStack` is turned off.
-export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClick, density = "comfortable", stickyHeader, className, selection, sort, active, trailing, phoneStack = true, phoneSummary, rowAttrs }: {
+export function Table<T>({ columns: wanted, rows, rowKey, onRow, density = "comfortable", stickyHeader, className, selection, sort, active, trailing, phoneStack = true, phoneSummary, rowAttrs }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
-  onRow?: (row: T, e: React.MouseEvent) => void;
-  onRowDoubleClick?: (row: T) => void;
+  onRow?: (row: T) => void;
   density?: "comfortable" | "compact";
   stickyHeader?: boolean;
   className?: string;
@@ -204,8 +203,7 @@ export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClic
               <tr
                 key={rowKey(r)}
                 {...rowAttrs?.(r)}
-                onClick={onRow && ((e) => onRow(r, e))}
-                onDoubleClick={onRowDoubleClick && (() => onRowDoubleClick(r))}
+                onClick={onRow && (() => onRow(r))}
                 className={clsx(
                   "group transition-colors",
                   phoneStack && "max-sm:block max-sm:border-b max-sm:border-line max-sm:px-4 max-sm:py-3 max-sm:last:border-b-0",

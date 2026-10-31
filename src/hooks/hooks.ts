@@ -36,23 +36,6 @@ export function useSearchText(): [string, (v: string) => void] {
   return [sp.get("q") ?? "", set];
 }
 
-// What a click and a double click do on a row or card: a click opens the preview, or closes it when that item is already open;
-// a double click opens the page. The second click of a double click is ignored, and a double click that began by closing the
-// preview does not open the page, so reaching for the preview's close never takes you away from the list.
-export function useRowClicks(peek: string | null, setPeek: (id: string | null) => void, open: (id: string) => void) {
-  const last = useRef<"opened" | "closed">("opened");
-  return {
-    click: (id: string, e?: { detail: number }) => {
-      if (e && e.detail > 1) return;
-      last.current = peek === id ? "closed" : "opened";
-      setPeek(id);
-    },
-    dbl: (id: string) => {
-      if (last.current === "opened") open(id);
-    },
-  };
-}
-
 // The item a list shows in its preview panel, kept in the URL as ?peek=<id>. Setting the one that is open closes it.
 export function usePeekParam(): [string | null, (id: string | null) => void] {
   const [sp, setSp] = useSearchParams();

@@ -16,8 +16,7 @@ import { PublishedBadge, TypeBadge } from "./shared";
 interface Common {
   items: Dataset[];
   peek: string | null;
-  onPeek: (pid: string, e?: { detail: number }) => void;
-  onOpen: (pid: string) => void;
+  onPeek: (pid: string) => void;
 }
 
 interface Col {
@@ -76,7 +75,7 @@ export function GridSkeleton() {
 const EST: Record<ColumnKey, number> = { runNumber: 70, keywords: 260, instrument: 200, technique: 130, proposal: 130, sample: 200, type: 80, created: 120, size: 90, files: 80, owner: 150 };
 const PRIORITY: ColumnKey[] = ["runNumber", "created", "size", "instrument", "technique", "keywords", "type", "sample", "proposal", "files", "owner"];
 
-export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, sort, dir, onSort, onKeyword, onInstrument, onTechnique }: Common & {
+export function DatasetTable({ items, peek, onPeek, density, columns, sort, dir, onSort, onKeyword, onInstrument, onTechnique }: Common & {
   onKeyword?: (k: string) => void;
   onInstrument?: (id: string) => void;
   onTechnique?: (name: string) => void;
@@ -126,8 +125,7 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
       rows={items}
       rowKey={(d) => d.pid}
       rowAttrs={(d) => ({ "data-pid": d.pid })}
-      onRow={(d, e) => onPeek(d.pid, e)}
-      onRowDoubleClick={(d) => onOpen(d.pid)}
+      onRow={(d) => onPeek(d.pid)}
       active={(d) => peek === d.pid}
       sort={{ key: sort, dir, onSort: (k) => onSort(k as SortKey) }}
       selection={{
@@ -140,7 +138,7 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
   );
 }
 
-export function DatasetGrid({ items, peek, onPeek, onOpen, hasMore, onNext, onKeyword, onInstrument, onTechnique }: Common & { hasMore?: boolean; onNext?: () => void; onKeyword?: (k: string) => void; onInstrument?: (id: string) => void; onTechnique?: (name: string) => void }) {
+export function DatasetGrid({ items, peek, onPeek, hasMore, onNext, onKeyword, onInstrument, onTechnique }: Common & { hasMore?: boolean; onNext?: () => void; onKeyword?: (k: string) => void; onInstrument?: (id: string) => void; onTechnique?: (name: string) => void }) {
   const selected = useSelection((s) => s.items);
   const toggle = useSelection((s) => s.toggle);
   return (
@@ -148,13 +146,12 @@ export function DatasetGrid({ items, peek, onPeek, onOpen, hasMore, onNext, onKe
       {items.map((d) => {
         const checked = !!selected[d.pid];
         return (
-          // a mouse shortcut (click peeks, double-click opens); the dataset's name inside is the keyboard way to both
+          // a mouse shortcut (click peeks); the dataset's name inside is the keyboard way to both
           // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <div
             key={d.pid}
             data-pid={d.pid}
-            onClick={(e) => onPeek(d.pid, e)}
-            onDoubleClick={() => onOpen(d.pid)}
+            onClick={() => onPeek(d.pid)}
             className={clsx(cardCls(checked && peek !== d.pid), "min-w-0 cursor-pointer select-none", peek === d.pid && "border-accent ring-2 ring-accent/25")}
           >
             <CardCheck checked={checked} onChange={() => toggle(d)} label={`Select ${d.datasetName}`} className="-right-2 -top-2" />

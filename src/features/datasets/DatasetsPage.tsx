@@ -12,7 +12,7 @@ import { ResizeEdge } from "@/components/ResizeEdge";
 import { useDock, usePanelWidth } from "@/components/SidePanel";
 import { api } from "@/api";
 import { bus } from "@/lib/bus";
-import { useDebounced, useElementWidth, useHotkeys, useMediaQuery, useRowClicks, yieldSelectionTo } from "@/hooks/hooks";
+import { useDebounced, useElementWidth, useHotkeys, useMediaQuery, yieldSelectionTo } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { useLazy } from "@/hooks/useLazy";
 import { fmtNum } from "@/lib/format";
@@ -143,7 +143,6 @@ export default function DatasetsPage() {
     },
     [setSp],
   );
-  const clicks = useRowClicks(peek, setPeek, (pid) => nav(datasetLink(pid)));
 
   // search box: local text, debounced into the URL
   const [text, setText] = useState(query.q);
@@ -302,9 +301,9 @@ export default function DatasetsPage() {
           ) : (
             <div className={clsx("transition-opacity duration-150", loading && "opacity-60")}>
               {view === "table" ? (
-                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={clicks.click} onOpen={clicks.dbl} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} />
+                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} />
               ) : (
-                <DatasetGrid onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={clicks.click} onOpen={clicks.dbl} hasMore={hasMore} onNext={() => update({ page: query.page + 1 })} />
+                <DatasetGrid onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} hasMore={hasMore} onNext={() => update({ page: query.page + 1 })} />
               )}
             </div>
           )}

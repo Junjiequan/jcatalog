@@ -19,12 +19,6 @@ describe("samples", () => {
     await user.type(box, "zzzznothing");
     expect(await screen.findByRole("heading", { name: /^No samples match/ })).toBeInTheDocument();
   });
-
-  it("a sample card opens its own page on double click", async () => {
-    const { user } = await renderApp("/samples");
-    await user.dblClick((await screen.findAllByRole("heading", { level: 3 }))[0]);
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toMatch(/^\/samples\/[^/]+$/));
-  });
 });
 
 describe("instruments", () => {

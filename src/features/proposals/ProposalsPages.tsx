@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
-import { proposalLink } from "@/lib/query";
 import { ArrowRight, Beaker, Calendar, Check, Database, FileCode, FileSearch, FileText, Link2, MoreHorizontal, Plus } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
 import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb, TabBar, Fact } from "@/components/ui/Primitives";
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { currentUser } from "@/lib/session";
 import { api } from "@/api";
 import { toast } from "@/store/toasts";
-import { useListView, usePaging, usePeekParam, useRecordRecent, useRowClicks, useSearchText } from "@/hooks/hooks";
+import { useListView, usePaging, usePeekParam, useRecordRecent, useSearchText } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { fmtBytes, fmtDate, fmtNum, plural } from "@/lib/format";
 import { datasetLink } from "@/lib/query";
@@ -55,7 +54,6 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
   const { data, error, reload } = useResource(["proposals"], () => api.proposals.list());
   const [q, setQ] = useSearchText();
   const [who, setWho] = useState<"all" | "mine" | "public">("all");
-  const nav = useNavigate();
   // tag filters live in the URL (?inst= ?tech= ?kw=), so a tag clicked anywhere opens the list already filtered
   const tags = useListFilter();
   const [, setSp] = useSearchParams();
@@ -67,7 +65,6 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
   const pg = usePaging(list, `${who}|${q}|${tags.key}`);
   // the proposal (or experiment) whose preview is open (?peek=), and the one before and after it on this page
   const [peek, setPeek] = usePeekParam();
-  const clicks = useRowClicks(peek, setPeek, (id) => nav(proposalLink(id)));
   const at = pg.items.findIndex((x) => x.proposalId === peek);
   const step = (d: number) => (at + d >= 0 && at + d < pg.items.length ? () => setPeek(pg.items[at + d].proposalId) : undefined);
   const titleOf = (id?: string | null) => (id ? (data ?? []).find((x) => x.proposalId === id)?.title : undefined);
@@ -110,10 +107,10 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
           {pg.items.map((p) => (
             // the same card as a sample, with the kind (proposal or experiment) as its icon colour and first badge
-            // click previews, double click or Enter opens: the card itself is the control
+            // a click or Enter previews: the card itself is the control
             // the card is a mouse target with a key way in (Enter), so it takes focus
             // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex
-            <div key={p.proposalId} onClick={(e) => clicks.click(p.proposalId, e)} onDoubleClick={() => clicks.dbl(p.proposalId)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(proposalLink(p.proposalId))} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-5", peek === p.proposalId && "border-accent ring-2 ring-accent/25"))}>
+            <div key={p.proposalId} onClick={() => setPeek(p.proposalId)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setPeek(p.proposalId)} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-5", peek === p.proposalId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.proposalId}`} className="-right-2 -top-2" />
               <div className="flex items-center gap-3">
                 <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", KIND_UI[proposalKind(p)].tile)}>{(() => { const I = KIND_UI[proposalKind(p)].icon; return <I className="h-5 w-5" />; })()}</span>
@@ -141,8 +138,7 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
             density={density}
             rowKey={(p) => p.proposalId}
             selection={sel}
-            onRow={(p, e) => clicks.click(p.proposalId, e)}
-            onRowDoubleClick={(p) => clicks.dbl(p.proposalId)}
+            onRow={(p) => setPeek(p.proposalId)}
             active={(p) => p.proposalId === peek}
             columns={show(cols)}
             phoneSummary={(p) => (

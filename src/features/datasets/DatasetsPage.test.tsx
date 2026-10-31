@@ -90,11 +90,12 @@ describe("the datasets list", () => {
     expect(Object.keys(useSelection.getState().items)).toHaveLength(1);
   });
 
-  it("opens a dataset with a double click, and the back link returns to the list", async () => {
+  it("opens a dataset from its preview", async () => {
     const { user } = await renderApp("/datasets");
     await waitFor(() => expect(rows()).toHaveLength(10));
     const pid = rows()[0].getAttribute("data-pid")!;
-    await user.dblClick(rows()[0]);
+    await user.click(rows()[0]);
+    await user.click(await screen.findByRole("button", { name: /Open details/ }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toContain(encodeURIComponent(pid)));
   });
 

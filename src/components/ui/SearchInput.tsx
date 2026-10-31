@@ -24,7 +24,7 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
 
   return (
     <div className={clsx("relative min-w-[240px] flex-1 sm:max-w-md", className)}>
-      <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-subtle" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
       <input
         ref={input}
         type="search"
@@ -39,7 +39,7 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
         aria-label={placeholder}
         className="field pl-9 pr-10 [&::-webkit-search-cancel-button]:appearance-none"
       />
-      <div className="absolute right-2.5 top-2">
+      <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
         {value ? (
           <button onClick={() => onChange("")} aria-label="Clear search" className="rounded-sm p-0.5 text-subtle hover:text-fg">
             <X className="h-4 w-4" />
