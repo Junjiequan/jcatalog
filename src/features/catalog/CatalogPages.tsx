@@ -89,7 +89,7 @@ function SamplesList() {
           {pg.items.map((s) => (
             // a mouse shortcut for the preview; the Preview button in the footer is the keyboard way
             // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-            <div key={s.sampleId} onClick={() => setPeek(s.sampleId)} className={cardCls(sel.checked(s), clsx("flex cursor-pointer flex-col p-5", peek === s.sampleId && "border-accent ring-2 ring-accent/25"))}>
+            <div key={s.sampleId} onClick={() => setPeek(s.sampleId)} onDoubleClick={() => nav(`/samples/${encodeURIComponent(s.sampleId)}`)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(`/samples/${encodeURIComponent(s.sampleId)}`)} className={cardCls(sel.checked(s), clsx("flex cursor-pointer flex-col p-5", peek === s.sampleId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(s)} onChange={() => sel.toggle(s)} label={`Select ${s.sampleName}`} className="-right-2 -top-2" />
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><FlaskConical className="h-5 w-5" /></span>
@@ -104,10 +104,6 @@ function SamplesList() {
               </dl>
               <div className="mt-auto flex items-center justify-between border-t border-line pt-3">
                 <span className="tnum text-[13px] text-muted">{plural(s.datasetCount, "dataset")}</span>
-                <span className="flex items-center gap-3">
-                  <button onClick={(e) => (e.stopPropagation(), setPeek(s.sampleId))} className="text-[13px] font-medium text-muted hover:text-accent hover:underline">Preview</button>
-                  <Link to={`/samples/${encodeURIComponent(s.sampleId)}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Open sample <ArrowRight className="h-3.5 w-3.5" /></Link>
-                </span>
               </div>
             </div>
           ))}
@@ -304,7 +300,7 @@ function PublishedList() {
             const citation = `${p.metadata.creators.map((c) => c.name).join(", ")} (${p.metadata.publicationYear}). ${p.title}. ${p.metadata.publisher.name}. https://doi.org/${p.doi}`;
             return (
               // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-              <article key={p.doi} onClick={() => setPeek(p.pid)} className={cardCls(sel.checked(p) || p.pid === peek, "flex cursor-pointer flex-col p-6")}>
+              <article key={p.doi} onClick={() => setPeek(p.pid)} onDoubleClick={() => nav(`/published/${encodeURIComponent(p.pid)}`)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(`/published/${encodeURIComponent(p.pid)}`)} className={cardCls(sel.checked(p) || p.pid === peek, "flex cursor-pointer flex-col p-6")}>
                 <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.title}`} className="-right-2 -top-2" />
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted"><Explain title="Open access" text="Published under a permanent DOI. Anyone can find, cite and download these datasets, no account needed." icon={Globe}><span className="inline-flex cursor-help"><Badge tone="success" icon={Globe}>Open access</Badge></span></Explain><span>{p.metadata.publicationYear}</span><span>·</span><a href={`https://doi.org/${p.doi}`} target="_blank" rel="noreferrer" className="font-mono text-accent hover:underline">{p.doi}</a></div>
                 <h3 className="mt-2 line-clamp-2 min-h-[3.1rem] text-lg font-semibold leading-snug" title={p.title}>{p.title}</h3>
@@ -319,8 +315,6 @@ function PublishedList() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button size="sm" onClick={() => (navigator.clipboard?.writeText(citation), toast.success("Citation copied", { description: "Paste it straight into your reference list." }))}><Quote className="h-3.5 w-3.5" />Cite</Button>
-                    <Button size="sm" onClick={(e) => (e.stopPropagation(), setPeek(p.pid))}>Preview</Button>
-                    <Link to={`/published/${encodeURIComponent(p.pid)}`} onClick={(e) => e.stopPropagation()}><Button size="sm" variant="primary">Open publication</Button></Link>
                   </div>
                 </div>
               </article>

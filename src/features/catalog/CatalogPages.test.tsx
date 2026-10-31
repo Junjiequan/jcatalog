@@ -20,10 +20,10 @@ describe("samples", () => {
     expect(await screen.findByRole("heading", { name: /^No samples match/ })).toBeInTheDocument();
   });
 
-  it("each sample opens its own page", async () => {
-    await renderApp("/samples");
-    const links = await screen.findAllByRole("link", { name: /Open sample/ });
-    expect(links[0].getAttribute("href")).toMatch(/^\/samples\/[^/]+$/);
+  it("a sample card opens its own page on double click", async () => {
+    const { user } = await renderApp("/samples");
+    await user.dblClick((await screen.findAllByRole("heading", { level: 3 }))[0]);
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toMatch(/^\/samples\/[^/]+$/));
   });
 });
 

@@ -8,7 +8,7 @@ afterEach(resetApp);
 describe("previews", () => {
   it("a sample's Preview button opens it, and the link keeps it", async () => {
     const { user } = await renderApp("/samples");
-    await user.click((await screen.findAllByRole("button", { name: "Preview" }))[0]);
+    await user.click((await screen.findAllByRole("heading", { level: 3 }))[0]);
     expect(await screen.findByRole("button", { name: "Open details" })).toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("peek=");
   });
@@ -32,7 +32,7 @@ describe("previews", () => {
 
   it("a proposal opens in a preview with its own details link", async () => {
     const { user } = await renderApp("/proposals");
-    await user.click((await screen.findAllByRole("button", { name: "Preview" }))[0]);
+    await user.click((await screen.findAllByRole("heading", { level: 3 }))[0]);
     expect(await screen.findByRole("button", { name: "Open details" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open details" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/proposals/"));
@@ -112,7 +112,7 @@ describe("each list builds its own filters", () => {
 describe("published data", () => {
   it("a publication opens in a preview and then on its own page", async () => {
     const { user } = await renderApp("/published");
-    await user.click((await screen.findAllByRole("button", { name: "Preview" }))[0]);
+    await user.click((await screen.findAllByRole("heading", { level: 3 }))[0]);
     expect(await screen.findByRole("button", { name: "Open details" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open details" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/\/published\/.+/));
@@ -142,5 +142,14 @@ describe("one value of an applied filter", () => {
     await user.click(await screen.findByRole("button", { name: "Remove LoKI" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/inst=skadi/));
     expect(screen.getByTestId("where")).not.toHaveTextContent(/loki/);
+  });
+});
+
+describe("cards", () => {
+  it("a proposal card previews on click and opens on double click or Enter", async () => {
+    const { user } = await renderApp("/proposals");
+    const title = (await screen.findAllByRole("heading", { level: 3 }))[0];
+    await user.dblClick(title);
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/\/proposals\/.+/));
   });
 });

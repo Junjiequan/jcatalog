@@ -109,9 +109,9 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
           {pg.items.map((p) => (
             // the same card as a sample, with the kind (proposal or experiment) as its icon colour and first badge
-            // a mouse shortcut for the preview; the Preview button in the footer is the keyboard way
+            // click previews, double click or Enter opens: the card itself is the control
             // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-            <div key={p.proposalId} onClick={() => setPeek(p.proposalId)} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-5", peek === p.proposalId && "border-accent ring-2 ring-accent/25"))}>
+            <div key={p.proposalId} onClick={() => setPeek(p.proposalId)} onDoubleClick={() => nav(proposalLink(p.proposalId))} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && nav(proposalLink(p.proposalId))} className={cardCls(sel.checked(p), clsx("flex cursor-pointer flex-col p-5", peek === p.proposalId && "border-accent ring-2 ring-accent/25"))}>
               <CardCheck checked={sel.checked(p)} onChange={() => sel.toggle(p)} label={`Select ${p.proposalId}`} className="-right-2 -top-2" />
               <div className="flex items-center gap-3">
                 <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", KIND_UI[proposalKind(p)].tile)}>{(() => { const I = KIND_UI[proposalKind(p)].icon; return <I className="h-5 w-5" />; })()}</span>
@@ -129,10 +129,6 @@ function ProposalsList({ kind }: { kind: ProposalKind }) {
               </dl>
               <div className="mt-auto flex items-center justify-between border-t border-line pt-3">
                 <span className="tnum text-[13px] text-muted">{plural(p.datasetCount, "dataset")}</span>
-                <span className="flex items-center gap-3">
-                  <button onClick={(e) => (e.stopPropagation(), setPeek(p.proposalId))} className="text-[13px] font-medium text-muted hover:text-accent hover:underline">Preview</button>
-                  <Link to={proposalLink(p.proposalId)} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">Open {noun} <ArrowRight className="h-3.5 w-3.5" /></Link>
-                </span>
               </div>
             </div>
           ))}
