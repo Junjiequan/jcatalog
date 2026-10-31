@@ -74,7 +74,7 @@ export function CommandPalette() {
       { id: "theme", group: "Actions", label: "Toggle dark mode", tile: "bg-accent-soft text-accent", icon: Moon, run: () => set({ theme: document.documentElement.classList.contains("dark") ? "light" : "dark" }) },
       { id: "keys", group: "Actions", label: "Show keyboard shortcuts", keys: ["?"], tile: "bg-accent-soft text-accent", icon: Keyboard, run: () => set({ shortcutsOpen: true }) },
     ];
-    if (selCount) actions.push({ id: "clear", group: "Actions", label: `Clear selection (${selCount})`, tile: "bg-accent-soft text-accent", icon: Trash2, run: () => useSelection.getState().clear() });
+    if (selCount) actions.push({ id: "clear", group: "Actions", label: `Clear selection (${selCount})`, tile: "bg-selection-soft text-selection", icon: Trash2, run: () => useSelection.getState().clear() });
     actions.filter((a) => !t || a.label.toLowerCase().includes(t)).forEach((a) => out.push(a));
     // a typed word can be taken to the list of the section the user is in, which searches there
     if (t) out.push({ id: "find", group: "Find", label: `Find “${q.trim()}” in ${here.noun}`, hint: `Opens the ${here.noun} list, which searches there`, tile: "bg-accent-soft text-accent", icon: Search, run: go(`${here.to}${here.to.includes("?") ? "&" : "?"}q=${encodeURIComponent(q.trim())}`) });
@@ -146,7 +146,6 @@ export function CommandPalette() {
                     onClick={() => run(it)}
                     className={clsx("relative flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors", on ? "bg-accent-soft" : "hover:bg-surface-2")}
                   >
-                    {on && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />}
                     <span className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", it.tile)}><it.icon className="h-4 w-4" strokeWidth={1.9} /></span>
                     <span className="min-w-0 flex-1">
                       <span className={clsx("block truncate font-medium", on && "text-accent")} title={it.label}><Mark text={it.label} q={q} /></span>

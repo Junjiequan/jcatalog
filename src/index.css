@@ -19,6 +19,9 @@
   --color-accent-deep: rgb(var(--accent-deep));
   --color-brand: rgb(var(--brand));
   --color-teal: rgb(var(--teal));
+  --color-selection: rgb(var(--selection));
+  --color-selection-soft: rgb(var(--selection-soft));
+  --color-selection-fg: rgb(var(--selection-fg));
   --color-success: rgb(var(--success));
   --color-warn: rgb(var(--warn));
   --color-danger: rgb(var(--danger));
@@ -107,6 +110,10 @@
     --accent-fg: 255 255 255;
     --accent-soft: 224 243 252;
     --accent-deep: 0 100 150;
+    /* everything that has to do with the selection (the panel, its header, ticks, badges, selected cards) wears this one colour */
+    --selection: 0 102 70;
+    --selection-soft: 222 242 233;
+    --selection-fg: 255 255 255;
     --teal: 13 148 136;
     --success: 21 128 61;
     --warn: 161 98 7;
@@ -132,6 +139,9 @@
     --success: 74 222 128;
     --warn: 251 191 36;
     --danger: 248 113 113;
+    --selection: 52 190 140;
+    --selection-soft: 10 52 40;
+    --selection-fg: 4 24 16;
     color-scheme: dark;
   }
 
@@ -175,7 +185,7 @@
 @layer components {
 
   .field {
-    @apply h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-fg placeholder:text-subtle transition-colors hover:border-subtle focus:border-accent focus:outline-hidden focus:ring-2 focus:ring-accent/20;
+    @apply h-8 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-fg placeholder:text-subtle transition-colors hover:border-subtle focus:border-accent focus:outline-hidden focus:ring-2 focus:ring-accent/20;
   }
   .card {
     @apply rounded-xl border border-line bg-surface shadow-card;

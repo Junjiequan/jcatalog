@@ -65,3 +65,12 @@ describe("table columns", () => {
     expect(useUI.getState().columns.size).toBe(before.size);
   });
 });
+
+describe("the panels on the right", () => {
+  it("the preview and the selection keep a width each", () => {
+    useUI.getState().set({ previewWidth: 400, selectionWidth: 400 });
+    useUI.getState().set({ selectionWidth: 560 });
+    expect(useUI.getState().previewWidth).toBe(400);
+    expect(useUI.getState().selectionWidth).toBe(560);
+  });
+});

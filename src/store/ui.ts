@@ -34,6 +34,9 @@ interface UIState {
   sidebarCollapsed: boolean;
   filtersOpen: boolean;
   filtersWidth: number;
+  // the widths of the two panels on the right, each its own (a preview, the selection)
+  previewWidth: number;
+  selectionWidth: number;
   columns: Record<ColumnKey, boolean>;
   savedSearches: SavedSearch[];
   tipsDismissed: boolean;
@@ -73,6 +76,8 @@ export const useUI = create<UIState>()(
       sidebarCollapsed: false,
       filtersOpen: true,
       filtersWidth: 296,
+      previewWidth: 400,
+      selectionWidth: 400,
       columns: { runNumber: true, keywords: true, instrument: true, technique: true, proposal: false, sample: true, type: true, created: true, size: true, files: false, owner: false },
       savedSearches: [],
       tipsDismissed: false,
@@ -100,7 +105,7 @@ export const useUI = create<UIState>()(
       // columns added later still get their default in a browser that stored an older set
       merge: (persisted, current) => ({ ...current, ...(persisted as Partial<UIState>), columns: { ...current.columns, ...((persisted as Partial<UIState>).columns ?? {}) } }),
       partialize: (s) => ({
-        theme: s.theme, density: s.density, view: s.view, sidebarCollapsed: s.sidebarCollapsed, filtersOpen: s.filtersOpen, filtersWidth: s.filtersWidth,
+        theme: s.theme, density: s.density, view: s.view, sidebarCollapsed: s.sidebarCollapsed, filtersOpen: s.filtersOpen, filtersWidth: s.filtersWidth, previewWidth: s.previewWidth, selectionWidth: s.selectionWidth,
         columns: s.columns, savedSearches: s.savedSearches, tipsDismissed: s.tipsDismissed, recent: s.recent, filterSections: s.filterSections, builderOpen: s.builderOpen, listViews: s.listViews, hiddenColumns: s.hiddenColumns, trayPos: s.trayPos,
       }),
     },

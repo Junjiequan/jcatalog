@@ -199,8 +199,8 @@ export function SelectionTray() {
           </button>
         </Tip>
         <Tip label="Show the selected datasets">
-          <button onClick={() => set({ selectionOpen: true })} className="group -ml-2 mr-1 flex items-center gap-2 rounded-lg py-1 pl-2 pr-2.5 text-left hover:bg-surface-2">
-            <ListChecks className="h-5 w-5 text-accent" />
+          <button onClick={() => set({ selectionOpen: !useUI.getState().selectionOpen })} className="group -ml-2 mr-1 flex items-center gap-2 rounded-lg py-1 pl-2 pr-2.5 text-left hover:bg-surface-2">
+            <ListChecks className="h-5 w-5 text-selection" />
             <span>
               <span className="block text-sm font-semibold">{list.length} selected</span>
               <span className="tnum hidden max-w-[260px] truncate text-xs text-muted sm:block">{kinds.length === 1 && kinds[0][0] === "dataset" ? `${fmtBytes(bytes)} · ${fmtNum(list.reduce((a, i) => a + (i.files ?? 0), 0))} files` : gist}</span>
@@ -234,8 +234,10 @@ export function SelectionSheet() {
   return (
     <SidePanel
       open={open}
+      widthKey="selectionWidth"
       onClose={() => set({ selectionOpen: false })}
-      title={`Selection · ${list.length}`}
+      title="Selection"
+      count={list.length}
       footer={
         list.length ? (
           <div className="flex w-full items-center justify-end gap-2">
@@ -256,8 +258,8 @@ export function SelectionSheet() {
         groups.map(([kind, l]) => (
           <section key={kind}>
             {/* heading: name, count, size, and one compact menu with the kind's actions for the whole group */}
-            <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-line bg-surface-3 py-1 pl-4 pr-2">
-              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{KIND_LABEL[kind][1]} · {l.length}{kind === "dataset" && <span className="tnum ml-1 font-normal normal-case tracking-normal">· {fmtBytes(l.reduce((a, i) => a + (i.size ?? 0), 0))}</span>}</span>
+            <div className="sticky top-0 z-10 flex items-center gap-2 border-y border-line bg-surface-2 py-1 pl-4 pr-2">
+              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{KIND_LABEL[kind][1]} ({l.length}){kind === "dataset" && <span className="tnum ml-2 font-normal normal-case tracking-normal text-subtle">{fmtBytes(l.reduce((a, i) => a + (i.size ?? 0), 0))}</span>}</span>
               {/* every action for the whole group behind one ⋯ */}
               <Menu tip={`Actions for all ${l.length} ${KIND_LABEL[kind][l.length === 1 ? 0 : 1]}`} trigger={<Button size="icon-sm" variant="ghost" aria-label={`Actions for all ${KIND_LABEL[kind][1]}`}><MoreHorizontal className="h-4 w-4" /></Button>}>
                 <MenuLabel>All {l.length} {KIND_LABEL[kind][l.length === 1 ? 0 : 1]}</MenuLabel>

@@ -16,7 +16,7 @@ import { PublishedBadge, TypeBadge } from "./shared";
 interface Common {
   items: Dataset[];
   peek: string | null;
-  onPeek: (pid: string) => void;
+  onPeek: (pid: string, e?: { detail: number }) => void;
   onOpen: (pid: string) => void;
 }
 
@@ -126,7 +126,7 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
       rows={items}
       rowKey={(d) => d.pid}
       rowAttrs={(d) => ({ "data-pid": d.pid })}
-      onRow={(d) => onPeek(d.pid)}
+      onRow={(d, e) => onPeek(d.pid, e)}
       onRowDoubleClick={(d) => onOpen(d.pid)}
       active={(d) => peek === d.pid}
       sort={{ key: sort, dir, onSort: (k) => onSort(k as SortKey) }}
@@ -153,7 +153,7 @@ export function DatasetGrid({ items, peek, onPeek, onOpen, hasMore, onNext, onKe
           <div
             key={d.pid}
             data-pid={d.pid}
-            onClick={() => onPeek(d.pid)}
+            onClick={(e) => onPeek(d.pid, e)}
             onDoubleClick={() => onOpen(d.pid)}
             className={clsx(cardCls(checked && peek !== d.pid), "min-w-0 cursor-pointer select-none", peek === d.pid && "border-accent ring-2 ring-accent/25")}
           >

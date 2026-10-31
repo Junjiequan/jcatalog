@@ -87,11 +87,11 @@ function Sidebar() {
         {wrap(
           "Selection",
           <div className="relative flex items-center gap-1">
-            <button onClick={() => set({ selectionOpen: true })} className={clsx(link(false), "min-w-0 flex-1")}>
+            <button onClick={() => set({ selectionOpen: !useUI.getState().selectionOpen })} className={clsx(link(false), "min-w-0 flex-1")}>
               <ShoppingBasket className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
               <span className={fade}>Selection</span>
               {count > 0 && (
-                <span className={clsx("rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-fg", collapsed ? "absolute right-0.5 top-0.5" : "ml-auto")}>{count}</span>
+                <span className={clsx("rounded-full bg-selection px-1.5 text-[11px] font-semibold text-selection-fg", collapsed ? "absolute right-0.5 top-0.5" : "ml-auto")}>{count}</span>
               )}
             </button>
             {/* the same eye as on the floating bar: fold it away, or bring it back */}
@@ -173,13 +173,13 @@ function Topbar() {
           <Button variant="primary" size="icon" aria-label="New dataset" onClick={() => set({ createOpen: true })}><Plus className="h-4 w-4" /></Button>
         ))}
         <Tip label="Selection">
-          <Button variant="ghost" size="icon" className="relative lg:hidden" aria-label="Selection" onClick={() => set({ selectionOpen: true })}>
+          <Button variant="ghost" size="icon" className="relative lg:hidden" aria-label="Selection" onClick={() => set({ selectionOpen: !useUI.getState().selectionOpen })}>
             <ShoppingBasket className="h-[18px] w-[18px]" />
-            {count > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-fg">{count}</span>}
+            {count > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-selection px-1 text-[10px] font-semibold text-selection-fg">{count}</span>}
           </Button>
         </Tip>
         <div className="hidden sm:block"><ThemeMenu /></div>
-        <Menu trigger={<button className="ml-1 shrink-0 rounded-full outline-offset-2" aria-label="Account"><AccountAvatar name={currentUser().name} role={currentUser().role} size={32} /></button>}>
+        <Menu trigger={<button className="ml-1 shrink-0 rounded-full outline-offset-2" aria-label="Account"><AccountAvatar name={currentUser().name} role={currentUser().role} size={28} /></button>}>
           <div className="px-2.5 py-2">
             <div className="flex items-center gap-2"><span className="truncate text-sm font-medium">{currentUser().name}</span><RoleBadge role={currentUser().role} /></div>
             <div className="text-xs text-muted">{currentUser().email}</div>

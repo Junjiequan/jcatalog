@@ -82,7 +82,7 @@ export function SamplePeek({ id }: { id: string }) {
       </div>
       <PeekFooter>
         <Button variant="primary" className="flex-1" onClick={() => nav(`/samples/${encodeURIComponent(id)}`)}>Open details <ArrowRight className="h-4 w-4" /></Button>
-        <Button onClick={() => useSelection.getState().toggleItem(sampleItem(s))} className={picked ? "border-accent bg-accent-soft text-accent" : ""}>
+        <Button onClick={() => useSelection.getState().toggleItem(sampleItem(s))} className={picked ? "border-selection bg-selection-soft text-selection" : ""}>
           {picked ? <><Check className="h-4 w-4" />Selected</> : <><Plus className="h-4 w-4" />Select</>}
         </Button>
       </PeekFooter>

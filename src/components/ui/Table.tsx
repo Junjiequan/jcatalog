@@ -113,7 +113,7 @@ export function CardCheck({ checked, onChange, label, className }: { checked: bo
         className,
       )}
     >
-      <input type="checkbox" aria-label={label} checked={checked} onChange={onChange} />
+      <input type="checkbox" className="accent-selection" aria-label={label} checked={checked} onChange={onChange} />
     </label>
   );
 }
@@ -127,7 +127,7 @@ export function SelectCheck({ checked, onChange, label, className }: { checked: 
       onChange={onChange}
       onClick={(e) => e.stopPropagation()}
       aria-label={label}
-      className={clsx("h-4 w-4 shrink-0 cursor-pointer", className)}
+      className={clsx("h-4 w-4 shrink-0 cursor-pointer accent-selection", className)}
     />
   );
 }
@@ -139,7 +139,7 @@ export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClic
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
-  onRow?: (row: T) => void;
+  onRow?: (row: T, e: React.MouseEvent) => void;
   onRowDoubleClick?: (row: T) => void;
   density?: "comfortable" | "compact";
   stickyHeader?: boolean;
@@ -184,7 +184,7 @@ export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClic
           <tr className={clsx("text-left text-[11px] font-semibold uppercase tracking-wider text-subtle", phoneStack && phoneSummary && "max-sm:flex max-sm:items-center max-sm:gap-2 max-sm:px-4 max-sm:py-2.5")}>
             {selection && (
               <th className={clsx("w-10 border-b border-line bg-surface py-2.5 pl-4", stick, phoneStack && phoneSummary && "max-sm:w-7 max-sm:border-0 max-sm:p-0")}>
-                <input type="checkbox" aria-label="Select all on this page" checked={allSelected} ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }} onChange={() => selection.togglePage(rows, allSelected)} />
+                <input type="checkbox" className="accent-selection" aria-label="Select all on this page" checked={allSelected} ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }} onChange={() => selection.togglePage(rows, allSelected)} />
               </th>
             )}
             {columns.map((c, i) => (
@@ -204,14 +204,14 @@ export function Table<T>({ columns: wanted, rows, rowKey, onRow, onRowDoubleClic
               <tr
                 key={rowKey(r)}
                 {...rowAttrs?.(r)}
-                onClick={onRow && (() => onRow(r))}
+                onClick={onRow && ((e) => onRow(r, e))}
                 onDoubleClick={onRowDoubleClick && (() => onRowDoubleClick(r))}
                 className={clsx(
                   "group transition-colors",
                   phoneStack && "max-sm:block max-sm:border-b max-sm:border-line max-sm:px-4 max-sm:py-3 max-sm:last:border-b-0",
                   phoneStack && phoneSummary && "max-sm:grid! max-sm:grid-cols-[1.75rem_minmax(0,1fr)] max-sm:gap-x-2",
                   onRow && "cursor-pointer select-none",
-                  picked ? "bg-accent-soft/50" : on ? "bg-surface-2" : onRow && "hover:bg-surface-2",
+                  picked ? "bg-selection-soft/50" : on ? "bg-surface-2" : onRow && "hover:bg-surface-2",
                 )}
               >
                 {selection && (

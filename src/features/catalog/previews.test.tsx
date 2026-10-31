@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { renderApp, resetApp } from "@/test/app";
 import { useSelection } from "@/store/selection";
+import { useUI } from "@/store/ui";
 
 afterEach(resetApp);
 
@@ -15,7 +16,7 @@ describe("previews", () => {
 
   it("Open details leads to the sample's page, Select adds it to the selection", async () => {
     const { user } = await renderApp("/samples?peek=s01");
-    await user.click(await screen.findByRole("button", { name: /Select/ }));
+    await user.click(await screen.findByRole("button", { name: "Select" }));
     expect(useSelection.getState().items["sample:s01"]).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Open details" }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/samples/s01"));
@@ -151,5 +152,25 @@ describe("cards", () => {
     const title = (await screen.findAllByRole("heading", { level: 3 }))[0];
     await user.dblClick(title);
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/\/proposals\/.+/));
+  });
+});
+
+describe("picking again closes", () => {
+  it("clicking the card that is previewed closes its preview", async () => {
+    const { user } = await renderApp("/samples");
+    const title = (await screen.findAllByRole("heading", { level: 3 }))[0];
+    await user.click(title);
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("peek="));
+    await user.click(title);
+    await waitFor(() => expect(screen.getByTestId("where")).not.toHaveTextContent("peek="));
+  });
+
+  it("the Selection button opens the panel and a second press closes it", async () => {
+    const { user } = await renderApp("/samples");
+    const button = (await screen.findAllByRole("button", { name: /^Selection$/ }))[0];
+    await user.click(button);
+    await waitFor(() => expect(useUI.getState().selectionOpen).toBe(true));
+    await user.click(button);
+    await waitFor(() => expect(useUI.getState().selectionOpen).toBe(false));
   });
 });

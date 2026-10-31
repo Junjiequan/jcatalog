@@ -71,7 +71,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = "
             className={clsx(
               "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-all",
               stretch && "max-sm:flex-1 max-sm:justify-center max-sm:px-1",
-              size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-[13px]",
+              size === "sm" ? "h-6 px-2.5 text-xs" : "h-7 px-2.5 text-[13px]",
               active ? "bg-accent-soft text-accent shadow-card ring-1 ring-accent/35" : "text-muted hover:text-fg",
             )}
           >

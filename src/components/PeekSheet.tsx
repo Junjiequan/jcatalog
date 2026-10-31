@@ -23,6 +23,7 @@ export function PeekSheet({ open, onClose, onPrev, onNext, children }: { open: b
       onClose={onClose}
       title="Preview"
       yields={selectionOpen}
+      widthKey="previewWidth"
       actions={
         <>
           <Tip label="Previous" kbd="K"><Button size="icon-sm" variant="ghost" onClick={onPrev} disabled={!onPrev} aria-label="Previous"><ChevronUp className="h-4 w-4" /></Button></Tip>

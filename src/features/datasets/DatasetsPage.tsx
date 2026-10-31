@@ -8,9 +8,11 @@ import { Menu, MenuCheck, MenuLabel, MenuRadio, MenuSep, Pop, Sheet } from "@/co
 import { EmptyState, ErrorState, Kbd, Pager, Segmented } from "@/components/ui/Primitives";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { AppliedFilters, FilterShell, FilterToggle } from "@/components/FilterShell";
+import { ResizeEdge } from "@/components/ResizeEdge";
+import { useDock, usePanelWidth } from "@/components/SidePanel";
 import { api } from "@/api";
 import { bus } from "@/lib/bus";
-import { useDebounced, useElementWidth, useHotkeys, useMediaQuery, yieldSelectionTo } from "@/hooks/hooks";
+import { useDebounced, useElementWidth, useHotkeys, useMediaQuery, useRowClicks, yieldSelectionTo } from "@/hooks/hooks";
 import { useResource } from "@/api/hooks";
 import { useLazy } from "@/hooks/useLazy";
 import { fmtNum } from "@/lib/format";
@@ -94,8 +96,9 @@ export default function DatasetsPage() {
   const is2XL = useMediaQuery("(min-width: 1536px)");
   const selectionOpen = useUI((s) => s.selectionOpen);
   // the selection panel and the preview share the dock unless the screen is wide enough for both
-  const covered = isXL && !is2XL && selectionOpen;
+  const covered = useDock(selectionOpen).hidden;
   const inlinePeek = isXL && !covered && (!filtersOpen || is2XL);
+  const { width: sidePanelWidth, max: sidePanelMax } = usePanelWidth("previewWidth", inlinePeek && !!peek);
   const [resultsRef] = useElementWidth<HTMLDivElement>();
 
   const listKey = serializeQuery(query).toString();
@@ -132,13 +135,15 @@ export default function DatasetsPage() {
       yieldSelectionTo(pid);
       setSp((prev) => {
         const n = new URLSearchParams(prev);
-        if (pid) n.set("peek", pid);
+        // the item that is already open, picked again, closes its preview
+        if (pid && prev.get("peek") !== pid) n.set("peek", pid);
         else n.delete("peek");
         return n;
       }, { replace: true });
     },
     [setSp],
   );
+  const clicks = useRowClicks(peek, setPeek, (pid) => nav(datasetLink(pid)));
 
   // search box: local text, debounced into the URL
   const [text, setText] = useState(query.q);
@@ -297,9 +302,9 @@ export default function DatasetsPage() {
           ) : (
             <div className={clsx("transition-opacity duration-150", loading && "opacity-60")}>
               {view === "table" ? (
-                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} onOpen={(pid) => nav(datasetLink(pid))} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} />
+                <DatasetTable onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={clicks.click} onOpen={clicks.dbl} density={density} columns={columns} sort={query.sort} dir={query.dir} onSort={onSort} />
               ) : (
-                <DatasetGrid onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={setPeek} onOpen={(pid) => nav(datasetLink(pid))} hasMore={hasMore} onNext={() => update({ page: query.page + 1 })} />
+                <DatasetGrid onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} items={items} peek={peek} onPeek={clicks.click} onOpen={clicks.dbl} hasMore={hasMore} onNext={() => update({ page: query.page + 1 })} />
               )}
             </div>
           )}
@@ -323,7 +328,8 @@ export default function DatasetsPage() {
       </section>
 
       {inlinePeek && peek && (
-        <aside className="w-[400px] shrink-0 border-l border-line bg-surface animate-slide-in-right">
+        <aside className="relative shrink-0 border-l border-line bg-surface animate-slide-in-right" style={{ width: sidePanelWidth }}>
+          <ResizeEdge side="left" grows="left" width={sidePanelWidth} min={320} max={sidePanelMax} initial={400} onChange={(w) => set({ previewWidth: w })} label="Resize preview" tone="blue" />
           <PeekContent key={peek} pid={peek} onKeyword={onKeyword} onInstrument={onInstrument} onTechnique={onTechnique} onClose={() => setPeek(null)} onPrev={() => move(-1)} onNext={() => move(1)} />
         </aside>
       )}

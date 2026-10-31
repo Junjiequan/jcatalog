@@ -139,7 +139,7 @@ export function PeekContent({ pid, onClose, onPrev, onNext, embedded, onKeyword,
         <Button variant="primary" className="flex-1" disabled={!d} onClick={() => nav(datasetLink(pid))}>
           Open details <ArrowRight className="h-4 w-4" />
         </Button>
-        <Button disabled={!d} onClick={() => d && toggle(d)} className={selected ? "border-accent bg-accent-soft text-accent" : ""}>
+        <Button disabled={!d} onClick={() => d && toggle(d)} className={selected ? "border-selection bg-selection-soft text-selection" : ""}>
           {selected ? <><Check className="h-4 w-4" />Selected</> : <><Plus className="h-4 w-4" />Select</>}
         </Button>
       </div>

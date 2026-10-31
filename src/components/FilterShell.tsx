@@ -8,6 +8,8 @@ import { InstrumentThumb } from "@/components/Thumb";
 import { FilterPanel } from "@/features/datasets/FilterPanel";
 import { EMPTY, type Update } from "@/features/datasets/filters/shared";
 import { GROUP_ICON, buildChips, summarize } from "@/features/datasets/chips";
+import { ResizeEdge } from "@/components/ResizeEdge";
+import { PANEL_MAX } from "@/lib/panelLimits";
 import { useTagFilter, type Field } from "@/components/tagScope";
 import { useHotkeys, useMediaQuery } from "@/hooks/hooks";
 import { activeFilterCount } from "@/lib/query";
@@ -91,34 +93,10 @@ export function FilterShell({ query, update, fields, onApplySaved, showLabel, sc
     <FilterCtx.Provider value={ctx}>
       <div className="flex h-full min-h-0 overflow-x-clip">
         {isDesktop && open && (
-          <aside className="relative shrink-0 border-r border-line-strong bg-surface shadow-[inset_0_3px_0_rgb(var(--accent))]" style={{ width }}>
+          <aside className="relative shrink-0 border-r border-line-strong bg-surface shadow-[inset_0_3px_0_rgb(var(--accent))]" style={{ width: Math.min(width, PANEL_MAX) }}>
             <div className="h-full overflow-y-auto">{panel}</div>
             {/* drag the edge to make the panel wider or narrower */}
-            <div
-              tabIndex={0}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize filters"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                const start = e.clientX;
-                const base = width;
-                // no text selection while the pointer sweeps across the page
-                document.body.style.userSelect = "none";
-                document.body.style.cursor = "col-resize";
-                const move = (ev: PointerEvent) => set({ filtersWidth: Math.max(240, Math.min(520, base + ev.clientX - start)) });
-                const up = () => {
-                  document.body.style.userSelect = "";
-                  document.body.style.cursor = "";
-                  window.removeEventListener("pointermove", move);
-                  window.removeEventListener("pointerup", up);
-                };
-                window.addEventListener("pointermove", move);
-                window.addEventListener("pointerup", up);
-              }}
-              onDoubleClick={() => set({ filtersWidth: 296 })}
-              className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize hover:bg-accent/30 active:bg-accent/40"
-            />
+            <ResizeEdge side="right" grows="right" width={width} min={240} max={PANEL_MAX} initial={296} onChange={(w) => set({ filtersWidth: w })} label="Resize filters" />
           </aside>
         )}
         {scroll ? <div className="min-w-0 flex-1 overflow-y-auto overflow-x-clip">{children}</div> : children}
@@ -147,7 +125,7 @@ export function FilterToggle({ place }: { place: "start" | "end" }) {
         onClick={() => (isDesktop ? set({ filtersOpen: !open }) : set({ mobileFiltersOpen: true }))}
         // open: a solid blue tab docked onto the panel's edge, so it reads as part of the panel; closed: a grey pill
         className={clsx(
-          "relative inline-flex h-9 shrink-0 items-center gap-2 text-sm font-medium transition-all",
+          "relative inline-flex h-8 shrink-0 items-center gap-2 text-[13px] font-medium transition-all",
           on ? "-ml-4 rounded-l-none rounded-r-xl bg-accent pl-4 pr-3 text-accent-fg shadow-[0_2px_8px_-2px_rgb(var(--accent)/0.5)] hover:bg-accent-deep sm:-ml-6 sm:pl-6" : "rounded-lg bg-surface-3/70 px-3 text-fg hover:bg-surface-3",
         )}
       >

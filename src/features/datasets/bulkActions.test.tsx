@@ -55,9 +55,9 @@ describe("the selection bar's Actions menu", () => {
     const { user } = await select([dataset("A"), proposal]);
     await user.click(await screen.findByRole("button", { name: "Actions" }));
     const menu = await screen.findByRole("menu");
-    expect(within(menu).getByText(/datasets · 1/)).toBeInTheDocument();
-    expect(within(menu).getByText(/proposals · 1/)).toBeInTheDocument();
-    expect(within(menu).getByText(/Everything · 2/)).toBeInTheDocument();
+    expect(within(menu).getByText(/datasets \(1\)/)).toBeInTheDocument();
+    expect(within(menu).getByText(/proposals \(1\)/)).toBeInTheDocument();
+    expect(within(menu).getByText(/Everything \(2\)/)).toBeInTheDocument();
   });
 
   it("with only one kind there are no group headings", async () => {

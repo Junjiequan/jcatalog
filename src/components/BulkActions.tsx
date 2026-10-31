@@ -35,15 +35,15 @@ export function BulkActionsMenu({ items, afterRun, trigger }: { items: SelItem[]
   const kinds = byKind(items);
   const mixed = kinds.length > 1;
   return (
-    <Menu trigger={trigger ?? <Button size="sm" variant="primary" aria-label="Actions">Actions<ChevronDown className="h-4 w-4" /></Button>}>
+    <Menu trigger={trigger ?? <Button size="sm" variant="selection" aria-label="Actions">Actions<ChevronDown className="h-4 w-4" /></Button>}>
       {kinds.map(([k, l]) => (
         <Fragment key={k}>
-          {mixed && <MenuLabel>{KIND_LABEL[k][1]} · {l.length}</MenuLabel>}
+          {mixed && <MenuLabel>{KIND_LABEL[k][1]} ({l.length})</MenuLabel>}
           <ActionItems kind={k} part={l} runner={runner} />
         </Fragment>
       ))}
       <MenuSep />
-      {mixed && <MenuLabel>Everything · {items.length}</MenuLabel>}
+      {mixed && <MenuLabel>Everything ({items.length})</MenuLabel>}
       {GENERAL_ACTIONS().map((a) => <MenuItem key={a.id} icon={a.icon} disabled={runner.busy === a.id} onSelect={() => runner.run(a, items)}>{a.label}</MenuItem>)}
     </Menu>
   );

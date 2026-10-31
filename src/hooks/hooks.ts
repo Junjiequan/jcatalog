@@ -13,7 +13,10 @@ export function useRecordRecent(item: RecentItem | undefined) {
 
 // Opening a preview takes the place of a docked selection panel when the two do not fit side by side
 export function yieldSelectionTo(id: string | null) {
-  if (id && matchMedia("(min-width: 1280px) and (max-width: 1535px)").matches) useUI.getState().set({ selectionOpen: false });
+  if (!id) return;
+  // the same sum as useDock: a docked selection panel steps aside when the two would not both fit beside the page
+  const needed = (innerWidth >= 1024 ? (useUI.getState().sidebarCollapsed ? 69 : 249) + (useUI.getState().filtersOpen ? useUI.getState().filtersWidth : 0) : 0) + 520 + 2 * 320;
+  if (innerWidth >= 640 && innerWidth < needed) useUI.getState().set({ selectionOpen: false });
 }
 
 // The text in a list's search box, kept in the URL as ?q=, so a link (or quick access) can open the list already searched.
@@ -33,7 +36,24 @@ export function useSearchText(): [string, (v: string) => void] {
   return [sp.get("q") ?? "", set];
 }
 
-// The item a list shows in its preview panel, kept in the URL as ?peek=<id>.
+// What a click and a double click do on a row or card: a click opens the preview, or closes it when that item is already open;
+// a double click opens the page. The second click of a double click is ignored, and a double click that began by closing the
+// preview does not open the page, so reaching for the preview's close never takes you away from the list.
+export function useRowClicks(peek: string | null, setPeek: (id: string | null) => void, open: (id: string) => void) {
+  const last = useRef<"opened" | "closed">("opened");
+  return {
+    click: (id: string, e?: { detail: number }) => {
+      if (e && e.detail > 1) return;
+      last.current = peek === id ? "closed" : "opened";
+      setPeek(id);
+    },
+    dbl: (id: string) => {
+      if (last.current === "opened") open(id);
+    },
+  };
+}
+
+// The item a list shows in its preview panel, kept in the URL as ?peek=<id>. Setting the one that is open closes it.
 export function usePeekParam(): [string | null, (id: string | null) => void] {
   const [sp, setSp] = useSearchParams();
   const peek = sp.get("peek");
@@ -42,7 +62,8 @@ export function usePeekParam(): [string | null, (id: string | null) => void] {
       yieldSelectionTo(id);
       setSp((prev) => {
         const next = new URLSearchParams(prev);
-        if (id) next.set("peek", id);
+        // the item that is already open, picked again, closes its preview
+        if (id && prev.get("peek") !== id) next.set("peek", id);
         else next.delete("peek");
         return next;
       }, { replace: true });

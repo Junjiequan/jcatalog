@@ -85,7 +85,7 @@ export function CardGrid({ children, count, hasMore, onNext, wide, className }: 
 }
 
 // The card shell every grid shares (Datasets included): lifts on hover, and tints when selected
-export const cardCls = (selected: boolean, extra?: string) => clsx("group relative card transition-all hover:-translate-y-0.5 hover:shadow-pop", selected && "border-accent/50 bg-accent-soft/30", extra);
+export const cardCls = (selected: boolean, extra?: string) => clsx("group relative card transition-all hover:-translate-y-0.5 hover:shadow-pop", selected && "border-selection/50 bg-selection-soft/40", extra);
 
 // One "label: value" line of a detail card; nothing is drawn when there is no value
 export const Fact = ({ label, children }: { label: string; children: React.ReactNode }) => (children === undefined || children === null || children === "" ? null : <div className="flex justify-between gap-4 border-b border-line py-2 text-[13px] last:border-b-0"><dt className="shrink-0 text-subtle">{label}</dt><dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">{children}</dd></div>);

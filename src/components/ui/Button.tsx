@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { Check, Copy, Loader2 } from "lucide-react";
 import { Tip } from "./Overlay";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "selection";
 type Size = "sm" | "md" | "lg" | "icon" | "icon-sm";
 
 const VARIANTS: Record<Variant, string> = {
@@ -12,13 +12,16 @@ const VARIANTS: Record<Variant, string> = {
   outline: "border border-line bg-surface text-fg hover:border-line-strong hover:bg-surface-2",
   ghost: "text-muted hover:bg-surface-2 hover:text-fg",
   danger: "bg-danger text-white hover:brightness-110",
+  // the colour of everything to do with the selection
+  selection: "bg-selection text-selection-fg shadow-xs hover:brightness-110 active:brightness-95",
 };
 const SIZES: Record<Size, string> = {
-  sm: "h-8 gap-1.5 px-3 text-[13px]",
-  md: "h-9 gap-2 px-3.5 text-sm",
-  lg: "h-11 gap-2 px-5 text-sm",
-  icon: "h-9 w-9",
-  "icon-sm": "h-7 w-7",
+  // one step smaller than they were; a finger still gets the old size
+  sm: "h-7 gap-1.5 px-2.5 text-xs pointer-coarse:h-8",
+  md: "h-8 gap-1.5 px-3 text-[13px] pointer-coarse:h-9",
+  lg: "h-10 gap-2 px-5 text-sm",
+  icon: "h-8 w-8 pointer-coarse:h-9 pointer-coarse:w-9",
+  "icon-sm": "h-6 w-6 pointer-coarse:h-7 pointer-coarse:w-7",
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {

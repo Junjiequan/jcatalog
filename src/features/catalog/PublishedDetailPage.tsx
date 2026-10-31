@@ -71,7 +71,7 @@ function PublishedDetail() {
           <div className="flex flex-wrap items-center gap-2 pt-5">
             <Button variant="primary" onClick={() => setTab("datasets")}><Database className="h-4 w-4" />Browse datasets</Button>
             <Button onClick={() => (navigator.clipboard?.writeText(citation), toast.success("Citation copied", { description: "Paste it straight into your reference list." }))}><Quote className="h-4 w-4" />Cite</Button>
-            <Button onClick={() => useSelection.getState().toggleItem(publishedItem(p))} className={picked ? "border-accent bg-accent-soft text-accent" : ""}>
+            <Button onClick={() => useSelection.getState().toggleItem(publishedItem(p))} className={picked ? "border-selection bg-selection-soft text-selection" : ""}>
               {picked ? <><Check className="h-4 w-4" />In selection</> : <><Plus className="h-4 w-4" />Add to selection</>}
             </Button>
             <Menu tip="More actions" trigger={<Button size="icon" aria-label="More actions"><MoreHorizontal className="h-4 w-4" /></Button>}>

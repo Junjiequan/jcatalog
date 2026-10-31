@@ -213,7 +213,7 @@ export default function DatasetDetailPage() {
             </div>
             <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
               {canEdit && !d.isPublished && <Button variant="primary" onClick={publish} loading={publishing}><Sparkles className="h-4 w-4" />Publish</Button>}
-              <Button onClick={() => toggleSel(d)} className={selected ? "border-accent bg-accent-soft text-accent" : ""}>
+              <Button onClick={() => toggleSel(d)} className={selected ? "border-selection bg-selection-soft text-selection" : ""}>
                 {selected ? <><Check className="h-4 w-4" />In selection</> : <><Plus className="h-4 w-4" />Add to selection</>}
               </Button>
               {canEdit && <Button onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" />Share</Button>}
