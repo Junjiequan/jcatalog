@@ -10,13 +10,15 @@ import type { CatalogApi, CreateInput } from "@/api/types";
 import type { SeedDataset } from "./types";
 import {Dataset, DatasetQuery, FacetField, FacetOption, FileEntry, FilterGroup, Instrument, Job, JobKind, MetaCond, MetaKeyInfo, Proposal, PublishedData, Sample, Scope, Storage, storageOf, techniqueNames} from "@/types";
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// the pretend network delay; tests run without it
+const TESTING = import.meta.env.MODE === "test";
+const sleep = (ms: number) => (TESTING ? Promise.resolve() : new Promise((r) => setTimeout(r, ms)));
 // a fast backend answers in well under a second
 const lag = () => sleep(50 + Math.random() * 70);
 
 // cancellable delay for the bounded result count
 const slowLag = (min: number, spread: number, signal?: AbortSignal) =>
-  new Promise<void>((resolve, reject) => {
+  TESTING ? Promise.resolve() : new Promise<void>((resolve, reject) => {
     const t = setTimeout(resolve, min + Math.random() * spread);
     signal?.addEventListener("abort", () => {
       clearTimeout(t);
@@ -524,7 +526,8 @@ export const mockApi: CatalogApi = {
     label: labelFor,
     facetValues: facetOptions,
     searchKeywords: async (text: string, limit?: number) => (await sleep(30), searchKeywords(text, limit)),
-    proposals: () => PROPOSALS.filter((p) => user.groups.includes(p.ownerGroup)),
+    // an administrator reaches every proposal; everyone else only their groups'
+    proposals: () => PROPOSALS.filter((p) => isAdmin() || user.groups.includes(p.ownerGroup)),
     instruments: () => INSTRUMENTS,
     samples: () => SAMPLES,
   },

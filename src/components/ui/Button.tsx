@@ -1,6 +1,7 @@
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { forwardRef, useState, type ButtonHTMLAttributes } from "react";
 import clsx from "clsx";
-import { Loader2 } from "lucide-react";
+import { Check, Copy, Loader2 } from "lucide-react";
+import { Tip } from "./Overlay";
 
 type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg" | "icon" | "icon-sm";
@@ -47,3 +48,22 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     </button>
   );
 });
+
+export function CopyButton({ text, className, label = "Copy" }: { text: string; className?: string; label?: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <Tip label={done ? "Copied!" : label}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          navigator.clipboard?.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1400);
+        }}
+        className={clsx("inline-flex h-6 w-6 items-center justify-center rounded-md text-subtle transition-colors hover:bg-surface-3 hover:text-fg", className)}
+      >
+        {done ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+      </button>
+    </Tip>
+  );
+}

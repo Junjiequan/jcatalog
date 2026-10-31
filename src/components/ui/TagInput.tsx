@@ -24,8 +24,10 @@ export function TagInput({ value, onChange, placeholder, autoFocus }: { value: s
         onChange={(e) => setText(e.target.value)}
         onBlur={() => add(text)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") (e.preventDefault(), add(text));
-          else if (e.key === "Backspace" && !text && value.length) onChange(value.slice(0, -1));
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            add(text);
+          } else if (e.key === "Backspace" && !text && value.length) onChange(value.slice(0, -1));
         }}
       />
     </div>

@@ -16,7 +16,8 @@ bus.addEventListener("job-done", () => queryClient.invalidateQueries(dataQueries
 export function useResource<T>(key: QueryKey, fn: () => Promise<T>, opts: { enabled?: boolean } = {}) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: key, queryFn: fn, enabled: opts.enabled });
-  const reload = useCallback(() => void q.refetch(), [q.refetch]);
+  const { refetch } = q;
+  const reload = useCallback(() => void refetch(), [refetch]);
   const mutate = useCallback((updater: (d: T) => T) => qc.setQueryData<T>(key, (d) => (d === undefined ? d : updater(d))), [qc, key]);
   return { data: q.data, error: (q.error as Error | null) ?? undefined, loading: q.isPending, reload, mutate };
 }

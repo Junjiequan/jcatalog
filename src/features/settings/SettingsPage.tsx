@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Tip } from "@/components/ui/Overlay";
 import { QueryPreview } from "@/features/datasets/QueryPreview";
 import { Button } from "@/components/ui/Button";
-import { Avatar, BackButton, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
+import { BackButton, CopyButton, Segmented, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
 import { currentUser } from "@/lib/session";
 import { confirm } from "@/store/confirm";
 import { toast } from "@/store/toasts";

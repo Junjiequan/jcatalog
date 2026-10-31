@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Download, Eye, File as FileIcon, FileCode, FileText, ImageIcon, Music, Paperclip, Pencil, Star, Trash2, Upload, Video, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, Eye, File as FileIcon, FileCode, FileText, ImageIcon, Music, Paperclip, Pencil, Star, Trash2, Upload, Video, Maximize2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal, Tip } from "@/components/ui/Overlay";
 import { ErrorState, Skeleton } from "@/components/ui/Primitives";
@@ -20,22 +20,21 @@ const KIND_LABEL: Record<FileKind, string> = { image: "Image", pdf: "PDF", text:
 
 // pictures for attachments that arrive without one (seeded records), drawn once
 const drawn = new Map<string, string>();
+// The picture of an attachment: its stored thumbnail, one drawn earlier, or one drawn now (and remembered)
 function usePicture(a: Attachment) {
-  const [src, setSrc] = useState<string | undefined>(a.thumbnail ?? drawn.get(a.id));
+  const [fresh, setFresh] = useState<{ id: string; src: string }>();
   useEffect(() => {
-    if (a.thumbnail) return setSrc(a.thumbnail);
-    const hit = drawn.get(a.id);
-    if (hit) return setSrc(hit);
+    if (a.thumbnail || drawn.has(a.id)) return;
     let live = true;
-    makeThumbnail(a).then((t) => {
-      drawn.set(a.id, t);
-      if (live) setSrc(t);
+    makeThumbnail(a).then((src) => {
+      drawn.set(a.id, src);
+      if (live) setFresh({ id: a.id, src });
     });
     return () => {
       live = false;
     };
-  }, [a.id, a.thumbnail, a.fileName, a.dataUrl, a.mimeType]);
-  return src;
+  }, [a]);
+  return a.thumbnail ?? drawn.get(a.id) ?? (fresh?.id === a.id ? fresh.src : undefined);
 }
 
 export function AttachmentsTab({ d, canEdit, onDataset }: { d: Dataset; canEdit: boolean; onDataset: (next: Dataset) => void }) {
@@ -210,8 +209,11 @@ function Preview({ a }: { a: Attachment }) {
 
   if (kind === "image") return <ImageViewer src={a.dataUrl} alt={a.fileName} />;
   if (kind === "pdf") return <Suspense fallback={<Skeleton className="h-[60vh] w-full rounded-none" />}><PdfView bytes={bytes!} /></Suspense>;
+  // uploaded files come without caption tracks
+  /* oxlint-disable jsx-a11y/media-has-caption */
   if (kind === "video") return <div className="bg-black">{blobUrl && <video src={blobUrl} controls className="mx-auto max-h-[68vh] w-full" />}</div>;
   if (kind === "audio") return <div className="flex items-center justify-center p-10">{blobUrl && <audio src={blobUrl} controls className="w-full max-w-md" />}</div>;
+  /* oxlint-enable jsx-a11y/media-has-caption */
   if (kind === "text" || kind === "code") return <TextPreview a={a} />;
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
@@ -270,9 +272,12 @@ function ImageViewer({ src, alt }: { src: string; alt: string }) {
   }, []);
 
   const pct = Math.round(v.s * fit * 100);
+  // the picture is a widget with its own keys (+, -, arrows, 0), so it takes focus and key events
+  /* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
   return (
     <div
       ref={box}
+      role="application"
       tabIndex={0}
       aria-label={`${alt}, zoomable image`}
       onKeyDown={(e) => {
@@ -326,6 +331,7 @@ function ImageViewer({ src, alt }: { src: string; alt: string }) {
       {v.s === 1 && <span className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-black/50 px-2 py-1 text-[11px] text-white/90">Scroll to zoom · drag to pan · double-click to zoom in</span>}
     </div>
   );
+  /* oxlint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 }
 
 const MAX_LINES = 2500;

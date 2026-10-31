@@ -7,7 +7,7 @@ import { KeywordChips } from "@/components/ui/Primitives";
 import { InstrumentChips, TechniqueChips } from "@/components/InstrumentChips";
 import { Button } from "@/components/ui/Button";
 import { Tip } from "@/components/ui/Overlay";
-import { Badge, CopyButton, ErrorState, Skeleton } from "@/components/ui/Primitives";
+import { CopyButton, ErrorState, Skeleton } from "@/components/ui/Primitives";
 import { api } from "@/api";
 import { useResource } from "@/api/hooks";
 import { fmtBytes, fmtDate, fmtNum, humanizeKey } from "@/lib/format";

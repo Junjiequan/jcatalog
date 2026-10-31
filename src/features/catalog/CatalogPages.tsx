@@ -6,7 +6,7 @@ import { InstrumentThumb } from "@/components/Thumb";
 import { InstrumentChips, TechniqueChips, techniquesOf } from "@/components/InstrumentChips";
 import { ClipRow } from "@/components/ui/Overlay";
 import { Button } from "@/components/ui/Button";
-import { Badge, EmptyState, ErrorState, ListToolbar, NoMatches, Page, PageHeader, Pager, ProgressBar, STICKY_PAGER, CardCheck, CardGrid, Segmented, Skeleton, Table, TechBadge, ViewOptions, cardCls, ViewSwitch, useShownColumns, type Column, type TableSelection } from "@/components/ui/Primitives";
+import { Badge, EmptyState, ErrorState, ListToolbar, NoMatches, Page, PageHeader, Pager, ProgressBar, STICKY_PAGER, CardCheck, CardGrid, Segmented, Skeleton, Table, ViewOptions, cardCls, ViewSwitch, useShownColumns, type Column, type TableSelection } from "@/components/ui/Primitives";
 import { useSelection, type SelItem } from "@/store/selection";
 import { useUI } from "@/store/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -173,7 +173,6 @@ export function InstrumentsPage() {
         {view === "cards" ? (
         <CardGrid wide count={pg.items.length} hasMore={pg.hasMore} onNext={() => pg.setPage(pg.page + 1)}>
           {pg.items.map((i) => {
-            const st = STATUS[i.status];
             return (
               <div key={i.pid} className={cardCls(sel.checked(i), "flex flex-col")}>
                 <CardCheck checked={sel.checked(i)} onChange={() => sel.toggle(i)} label={`Select ${i.name}`} className="-right-2 -top-2" />
@@ -333,6 +332,8 @@ function JobRow({ j, onRetry }: { j: Job; onRetry: () => void }) {
 }
 
 export function JobsPage() {
+  // read once, not on every render
+  const [created] = useState(() => new Date().toISOString());
   const { data, error, reload } = useResource(["jobs"], () => api.jobs.list());
   const [f, setF] = useState<"all" | "active" | "done" | "failed" | "cancelled">("all");
   const anyActive = data?.some(isActive);
@@ -419,7 +420,7 @@ export function JobsPage() {
         <Pager className={STICKY_PAGER} from={pg.from} to={pg.to} totalLabel={list.length} page={pg.page} totalPages={pg.totalPages} hasMore={pg.hasMore} pageSize={pg.pageSize} onPage={pg.setPage} onPageSize={pg.setPageSize} />
         </>
       )}
-      <p className="mt-3 text-center text-xs text-subtle">Finished downloads stay available for 7 days. Created {fmtDate(new Date().toISOString())}.</p>
+      <p className="mt-3 text-center text-xs text-subtle">Finished downloads stay available for 7 days. Created {fmtDate(created)}.</p>
     </Page>
   );
 }

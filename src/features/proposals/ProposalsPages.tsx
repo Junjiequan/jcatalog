@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { proposalLink } from "@/lib/query";
-import { ArrowLeft, ArrowRight, Beaker, Calendar, Check, ChevronRight, Database, FileCode, FileSearch, FileText, Link2, Microscope, MoreHorizontal, Plus, Tag, X } from "lucide-react";
+import { ArrowRight, Beaker, Calendar, Check, Database, FileCode, FileSearch, FileText, Link2, MoreHorizontal, Plus, Tag, X } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
 import { Badge, Avatar, ErrorState, EmptyState, ListToolbar, NoMatches, Page, PageHeader, Pager, STICKY_PAGER, CardCheck, CardGrid, KeywordChips, Segmented, Skeleton, CopyButton, Table, ViewOptions, ViewSwitch, cardCls, useShownColumns, type Column, type TableSelection, Breadcrumb, TabBar } from "@/components/ui/Primitives";
 import { useSelection, type SelItem } from "@/store/selection";
@@ -205,7 +205,6 @@ export function ProposalDetailPage() {
   if (!data) return <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-8"><Skeleton className="mb-4 h-8 w-64" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
   const { proposal: p, parent, experiments, instruments, samples, recent, datasetCount, size } = data;
   const kind = proposalKind(p);
-  const mine = currentUser().groups.includes(p.ownerGroup);
   const m = (k: string) => proposalMeta(p, k);
   const instName = (iid: string) => instruments.find((x) => x.pid === iid)?.name ?? iid;
   const tabs: { id: PTab; label: string; count?: number }[] = [

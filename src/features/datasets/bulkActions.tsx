@@ -3,7 +3,7 @@ import { api } from "@/api";
 import { toast } from "@/store/toasts";
 import type { SelItem, SelKind } from "@/store/selection";
 import { exportPdf } from "@/features/selection/exportPdf";
-import { fmtBytes, plural } from "@/lib/format";
+import { plural } from "@/lib/format";
 
 // One bulk action over the selection. `kinds` says what it applies to; it runs on that part of the selection only.
 export interface BulkAction {

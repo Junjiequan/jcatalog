@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
-import { CardCheck, CardGrid, KeywordChips, TECH_HUE, Table, cardCls, type Column as TableColumn } from "@/components/ui/Primitives";
+import { CardCheck, CardGrid, KeywordChips, Table, cardCls, type Column as TableColumn } from "@/components/ui/Primitives";
 import { ChevronRight } from "lucide-react";
 import { Thumb } from "@/components/Thumb";
 import { Skeleton } from "@/components/ui/Primitives";
@@ -151,12 +151,13 @@ export function DatasetTable({ items, peek, onPeek, onOpen, density, columns, so
 export function DatasetGrid({ items, peek, onPeek, onOpen, hasMore, onNext, onKeyword, onInstrument, onTechnique }: Common & { hasMore?: boolean; onNext?: () => void; onKeyword?: (k: string) => void; onInstrument?: (id: string) => void; onTechnique?: (name: string) => void }) {
   const selected = useSelection((s) => s.items);
   const toggle = useSelection((s) => s.toggle);
-  const any = Object.keys(selected).length > 0;
   return (
     <CardGrid className="p-4 sm:p-6" count={items.length} hasMore={hasMore} onNext={onNext}>
       {items.map((d) => {
         const checked = !!selected[d.pid];
         return (
+          // a mouse shortcut (click peeks, double-click opens); the dataset's name inside is the keyboard way to both
+          // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <div
             key={d.pid}
             data-pid={d.pid}

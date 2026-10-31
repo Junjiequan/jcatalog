@@ -1,4 +1,5 @@
-import { defineConfig, type Plugin } from "vite";
+import type { Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -32,4 +33,17 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   // polling when running in a container, where file events from a bind mount do not arrive
   server: { port: 4500, watch: process.env.CHOKIDAR_USEPOLLING === "true" ? { usePolling: true, interval: 300 } : undefined },
+  // fast: happy-dom instead of a full browser, and only the tests next to the code
+  test: {
+    environment: "happy-dom",
+    setupFiles: ["src/test/setup.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
+    css: false,
+    restoreMocks: true,
+    unstubGlobals: false,
+    coverage: { provider: "v8", include: ["src/**/*.{ts,tsx}"], exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/**/*.d.ts", "src/main.tsx"], reporter: ["text-summary", "json-summary"],
+      // a floor, not a goal: it fails the run when coverage drops, so new code arrives with its tests
+      thresholds: { lines: 75, statements: 72, branches: 63, functions: 62 },
+    },
+  },
 });

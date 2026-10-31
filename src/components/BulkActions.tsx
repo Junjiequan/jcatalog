@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Menu, MenuItem, MenuLabel, MenuSep } from "@/components/ui/Overlay";
 import { GENERAL_ACTIONS, actionsFor, partFor, type BulkAction } from "@/features/datasets/bulkActions";
-import { KIND_LABEL, byKind, useSelection, type SelItem, type SelKind } from "@/store/selection";
+import { KIND_LABEL, byKind, selectionList, useSelection, type SelItem, type SelKind } from "@/store/selection";
 
 // The one place bulk actions are built. Anything that holds some items (the selection bar, the selection sheet, a table, a row) uses these.
 
@@ -12,7 +12,7 @@ import { KIND_LABEL, byKind, useSelection, type SelItem, type SelKind } from "@/
 export function useBulkRunner(afterRun?: () => void) {
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
-  const run = async (a: BulkAction, part: SelItem[] = partFor(a, Object.values(useSelection.getState().items))) => {
+  const run = async (a: BulkAction, part: SelItem[] = partFor(a, selectionList(useSelection.getState().items))) => {
     setBusy(a.id);
     try {
       await a.run(part, { nav });

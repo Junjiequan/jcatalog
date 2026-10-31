@@ -5,7 +5,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import clsx from "clsx";
 import { Eye, EyeOff, Keyboard, LogOut, MoreHorizontal, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, ShoppingBasket, Sun } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Avatar, Kbd, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
+import { Kbd, AccountAvatar, RoleBadge } from "@/components/ui/Primitives";
 import { Menu, MenuItem, MenuLabel, MenuRadio, MenuSep, Tip } from "@/components/ui/Overlay";
 import { Logo } from "@/components/Thumb";
 import { NAV, MOD } from "./nav";

@@ -14,6 +14,8 @@ export interface SelItem {
   size?: number;
   files?: number;
   archived?: boolean;
+  // when it was picked: a plain object lists number-like ids first, so the order a person chose is kept here
+  at?: number;
 }
 
 export const KIND_LABEL: Record<SelKind, [string, string]> = {
@@ -28,6 +30,10 @@ export const KIND_LABEL: Record<SelKind, [string, string]> = {
 export const KIND_ORDER: SelKind[] = ["dataset", "proposal", "experiment", "sample", "instrument", "published", "job"];
 
 export const datasetItem = (d: Dataset): SelItem => ({ kind: "dataset", id: d.pid, name: d.datasetName, sub: d.pid, link: `/datasets/${encodeURIComponent(d.pid)}`, size: d.size, files: d.numberOfFiles, archived: storageOf(d) === "archived" });
+
+// a pick order that never repeats, even for two picks in the same millisecond
+let clock = Date.now();
+const stamp = (i: SelItem): SelItem => (i.at === undefined ? { ...i, at: clock++ } : i);
 
 interface SelState {
   items: Record<string, SelItem>;
@@ -49,18 +55,18 @@ export const useSelection = create<SelState>()(
         set((s) => {
           const items = { ...s.items };
           if (items[item.id]) delete items[item.id];
-          else items[item.id] = item;
+          else items[item.id] = stamp(item);
           return { items };
         }),
       toggle: (d) =>
         set((s) => {
           const items = { ...s.items };
           if (items[d.pid]) delete items[d.pid];
-          else items[d.pid] = datasetItem(d);
+          else items[d.pid] = stamp(datasetItem(d));
           return { items };
         }),
-      addMany: (ds) => set((s) => ({ items: { ...s.items, ...Object.fromEntries(ds.map((d) => [d.pid, datasetItem(d)])) } })),
-      addItems: (list) => set((s) => ({ items: { ...s.items, ...Object.fromEntries(list.map((i) => [i.id, i])) } })),
+      addMany: (ds) => set((s) => ({ items: { ...s.items, ...Object.fromEntries(ds.filter((d) => !s.items[d.pid]).map((d) => [d.pid, stamp(datasetItem(d))])) } })),
+      addItems: (list) => set((s) => ({ items: { ...s.items, ...Object.fromEntries(list.filter((i) => !s.items[i.id]).map((i) => [i.id, stamp(i)])) } })),
       removeMany: (ids) =>
         set((s) => {
           const items = { ...s.items };
@@ -75,5 +81,6 @@ export const useSelection = create<SelState>()(
   ),
 );
 
-export const selectionList = (items: Record<string, SelItem>) => Object.values(items);
+// in the order they were picked
+export const selectionList = (items: Record<string, SelItem>) => Object.values(items).sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
 export const byKind = (list: SelItem[]) => KIND_ORDER.map((k) => [k, list.filter((i) => i.kind === k)] as const).filter(([, l]) => l.length);

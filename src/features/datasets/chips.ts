@@ -1,7 +1,7 @@
 import { Atom, CalendarDays, FileText, FlaskConical, HardDrive, Layers, Microscope, Tag, type LucideIcon } from "lucide-react";
 import { api } from "@/api";
 import { fmtDate } from "@/lib/format";
-import { describeCond, parseQuery } from "@/lib/query";
+import { describeCond } from "@/lib/query";
 import { MULTI_FIELDS, type DatasetQuery, type FacetField, type FilterGroup, type MultiField } from "@/types";
 
 export const GROUP_ICON: Record<FilterGroup, LucideIcon> = { types: Layers, instruments: Microscope, techniques: Atom, proposals: FileText, keywords: Tag, storage: HardDrive, date: CalendarDays, conds: FlaskConical };

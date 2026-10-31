@@ -259,7 +259,7 @@ export function CreateDatasetDialog() {
                 <Button size="icon-sm" variant="ghost" aria-label="Remove property" onClick={() => patch({ metadata: form.metadata.length > 1 ? form.metadata.filter((_, j) => j !== i) : [{ key: "", value: "", unit: "" }] })}><X className="h-4 w-4" /></Button>
               </div>
             ))}
-            <datalist id="create-keys">{["sample_temperature", "photon_energy", "wavelength", "exposure_time", "detector_distance", "number_of_frames", "pixel_size"].map((k) => <option key={k} value={k} />)}</datalist>
+            <datalist id="create-keys">{["sample_temperature", "photon_energy", "wavelength", "exposure_time", "detector_distance", "number_of_frames", "pixel_size"].map((k) => <option key={k} value={k}>{k}</option>)}</datalist>
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => patch({ metadata: [...form.metadata, { key: "", value: "", unit: "" }] })}><Plus className="h-4 w-4" />Add property</Button>

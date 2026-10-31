@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { canCreateDatasets, useRole } from "@/lib/permissions";
 import { useNavigate } from "react-router";
 import clsx from "clsx";
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Download, Eye, EyeOff, GripVertical, Info, ListChecks, MoreHorizontal, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, GripVertical, Info, ListChecks, MoreHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout, Kbd } from "@/components/ui/Primitives";
 import { Menu, MenuItem, MenuLabel, MenuSep, Modal, Sheet, Tip } from "@/components/ui/Overlay";
@@ -11,8 +11,7 @@ import { useToasts, toast, type ToastItem } from "@/store/toasts";
 import { confirm, useConfirmStore } from "@/store/confirm";
 import { useUI } from "@/store/ui";
 import { useMediaQuery } from "@/hooks/hooks";
-import { KIND_LABEL, byKind, useSelection, type SelItem } from "@/store/selection";
-import { api } from "@/api";
+import { KIND_LABEL, byKind, selectionList, useSelection, type SelItem } from "@/store/selection";
 import { fmtBytes, fmtNum, plural } from "@/lib/format";
 import { MOD, NAV } from "./nav";
 
@@ -139,7 +138,7 @@ export function SelectionTray() {
   const drag = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
   const [pos, setPos] = useState(trayPos);
   useEffect(() => setPos(trayPos), [trayPos]);
-  const list = Object.values(items);
+  const list = selectionList(items);
   if (!list.length) return null;
   const bytes = list.reduce((a, i) => a + (i.size ?? 0), 0);
   // "3 datasets · 1 proposal", or just the count when it is one kind
@@ -181,7 +180,6 @@ export function SelectionTray() {
   // folded on desktop: the sidebar's basket already shows the count, so nothing else is drawn
   if (hidden) return null;
   const clear = () => clearSelection(list);
-  const mixed = kinds.length > 1;
 
   return (
     <div className={clsx("pointer-events-none z-40", anchor, !pos && "justify-center")} style={at}>
@@ -228,8 +226,7 @@ export function SelectionSheet() {
   const items = useSelection((s) => s.items);
   const nav = useNavigate();
   const runner = useBulkRunner(() => set({ selectionOpen: false }));
-  const list = Object.values(items);
-  const bytes = list.reduce((a, i) => a + (i.size ?? 0), 0);
+  const list = selectionList(items);
   const groups = byKind(list);
   return (
     <Sheet

@@ -447,7 +447,7 @@ function powder(seed: number) {
     }
     return v;
   };
-  const bgf = (d: number) => range(() => 0.5, 0, 1) * 0 + 80 + 260 * Math.exp(-(d - dmin) / 0.55) + 40 * d;
+  const bgf = (d: number) => 80 + 260 * Math.exp(-(d - dmin) / 0.55) + 40 * d;
   const N = 520;
   const xs: number[] = [];
   const yo: number[] = [];

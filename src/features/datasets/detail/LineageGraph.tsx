@@ -10,10 +10,10 @@ import { Badge, EmptyState, ErrorState, Skeleton } from "@/components/ui/Primiti
 import { useResource } from "@/api/hooks";
 import { useMediaQuery } from "@/hooks/hooks";
 import { fmtDate } from "@/lib/format";
-import { loadLineage, type Lineage, type LineageNode, type LineageRole } from "@/lib/lineage";
+import { loadLineage, softwareLabel, type Lineage, type LineageNode, type LineageRole } from "@/lib/lineage";
 import { datasetLink, isExperimentId, proposalLink } from "@/lib/query";
 import type { Dataset } from "@/types";
-import { TypeBadge } from "./shared";
+import { TypeBadge } from "../shared";
 
 // The lineage graph: React Flow draws it, ELK lays it out. Datasets sit inside their proposal's box; what this
 // dataset was made from is to the left (above on a phone), what was made from it to the right (below).
@@ -95,13 +95,6 @@ async function layout(l: Lineage, dir: Dir, current: string): Promise<{ nodes: L
     .filter((e) => byPid.has(e.from) && byPid.has(e.to))
     .map((e) => ({ id: `${e.from}>${e.to}`, type: "software", source: e.from, target: e.to, data: { software: e.software, from: byPid.get(e.from)!.d.datasetName, to: byPid.get(e.to)!.d.datasetName, dir } }));
   return { nodes, edges };
-}
-
-// "https://github.com/scipp/esssans v24.12.0" -> "esssans v24.12.0"
-function softwareLabel(s?: string) {
-  if (!s) return undefined;
-  const [url, ...rest] = s.trim().split(/\s+/);
-  return [url.replace(/\/+$/, "").split("/").pop() || url, ...rest].join(" ");
 }
 
 // React Flow puts the arrowhead colour into an element id, so it must be a plain value rather than a CSS variable

@@ -22,6 +22,13 @@ export interface Lineage {
   edges: LineageEdge[];
 }
 
+// "https://github.com/scipp/esssans v24.12.0" -> "esssans v24.12.0"
+export function softwareLabel(s?: string) {
+  if (!s) return undefined;
+  const [url, ...rest] = s.trim().split(/\s+/);
+  return [url.replace(/\/+$/, "").split("/").pop() || url, ...rest].join(" ");
+}
+
 const STEPS = 2;
 const MAX_NODES = 40;
 

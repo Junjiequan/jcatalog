@@ -130,9 +130,18 @@ export function CommandPalette() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "ArrowDown") (e.preventDefault(), setIdx((i) => Math.min(items.length - 1, i + 1)));
-                if (e.key === "ArrowUp") (e.preventDefault(), setIdx((i) => Math.max(0, i - 1)));
-                if (e.key === "Enter") (e.preventDefault(), run(items[idx]));
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setIdx((i) => Math.min(items.length - 1, i + 1));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setIdx((i) => Math.max(0, i - 1));
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  run(items[idx]);
+                }
               }}
               placeholder="Search datasets, proposals, samples, instruments…"
               className="h-14 flex-1 bg-transparent text-[15px] outline-hidden placeholder:text-subtle"

@@ -6,7 +6,7 @@ export type JobKindOfStatus = "waiting" | "running" | "success" | "partial" | "f
 // Known words are grouped here, and any other code is shown as it came, never dropped or hidden.
 const RULES: [RegExp, JobKindOfStatus][] = [
   [/cancel|abort|withdraw/i, "cancelled"],
-  [/witherror|partial/i, "partial"],
+  [/with\w*errors?|partial/i, "partial"],
   [/unsuccess|fail|error|reject|timeout|expired/i, "failed"],
   [/^finished|success|complete|done/i, "success"],
   [/progress|running|started|processing|transfer/i, "running"],

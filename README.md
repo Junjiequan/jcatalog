@@ -13,6 +13,31 @@ npm run dev
 
 Open http://localhost:4500.
 
+## Develop
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | dev server on http://localhost:4500 |
+| `npm run check` | types, lint and tests with a coverage floor: what CI runs (about 12 seconds) |
+| `npm test` / `npm run test:watch` | about 290 tests in 7 seconds: [Vitest](https://vitest.dev) and Testing Library on happy-dom, next to the code (`*.test.ts(x)`). Pure logic is unit-tested; the pages are tested the way a person uses them, against the mock backend (`src/test/app.tsx` renders the whole app) |
+| `npm run test:coverage` | the same with coverage; fails below the floor set in `vite.config.ts` (about 79% of lines today) |
+| `npm run lint` | [oxlint](https://oxc.rs): correctness, React, hooks and accessibility rules (`.oxlintrc.json`) |
+
+Where things are:
+
+```
+src/
+  api/            the CatalogApi contract, the SciCat adapter, the data hooks
+  components/     shared building blocks (ui/ by kind: navigation, badges, feedback, page, Table…)
+  features/       one folder per area: datasets (page, detail/ tabs, filters/ widgets), proposals, catalog, settings, auth
+  hooks/ lib/     small hooks and pure logic (query, filters, lineage, format) with their tests
+  store/          UI state (zustand)
+config/           settings read at runtime: filters.yaml, app.yaml
+mock/             all dummy data, deletable (see below)
+```
+
+Lint reports 15 warnings that are left on purpose and visible: effects that set state and refs read during render, which a React Compiler would flag. They are not bugs today; fix them when touching those components.
+
 ## Run with Docker
 
 Only Docker is needed, nothing to build or install:

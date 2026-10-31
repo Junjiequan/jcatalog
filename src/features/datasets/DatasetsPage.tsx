@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { canCreateDatasets, useRole } from "@/lib/permissions";
 import { useNavigate, useSearchParams } from "react-router";
 import clsx from "clsx";
-import { Atom, Bookmark, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Columns3, FileText, Filter, FlaskConical, HardDrive, LayoutGrid, Layers, Microscope, Plus, Rows3, SlidersHorizontal, SearchX, Sparkles, Tag, X, ArrowUpDown, Database, type LucideIcon } from "lucide-react";
+import { Bookmark, ChevronDown, ChevronsLeft, ChevronsRight, Columns3, LayoutGrid, Plus, Rows3, SlidersHorizontal, SearchX, Sparkles, X, ArrowUpDown, Database } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Menu, MenuCheck, MenuLabel, MenuRadio, MenuSep, Pop, Sheet, Tip } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, Kbd, Pager, Segmented, TECH_HUE } from "@/components/ui/Primitives";
@@ -109,15 +109,15 @@ function SaveSearch({ qs }: { qs: string }) {
     >
       {saved.length > 0 && (
         <>
-          <label className="label">Save as</label>
-          <select value={target} onChange={(e) => { setTarget(e.target.value); const cur = saved.find((x) => x.id === e.target.value); if (cur) setName(cur.name); }} className="field mb-3 h-9 text-sm">
+          <label className="label" htmlFor="save-search-target">Save as</label>
+          <select id="save-search-target" value={target} onChange={(e) => { setTarget(e.target.value); const cur = saved.find((x) => x.id === e.target.value); if (cur) setName(cur.name); }} className="field mb-3 h-9 text-sm">
             <option value="new">A new saved search</option>
             {saved.map((x) => <option key={x.id} value={x.id}>Update “{x.name}”</option>)}
           </select>
         </>
       )}
-      <label className="label">Name this search</label>
-      <input autoFocus className="field" value={name} placeholder="e.g. Cold lysozyme runs" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+      <label className="label" htmlFor="save-search-name">Name this search</label>
+      <input id="save-search-name" autoFocus className="field" value={name} placeholder="e.g. Cold lysozyme runs" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
       <Button variant="primary" className="mt-3 w-full" disabled={!name.trim()} onClick={save}>Save</Button>
     </Pop>
   );
@@ -291,7 +291,7 @@ export default function DatasetsPage() {
             <FilterPanel query={query} update={update} onApplySaved={applySaved} onHide={() => set({ filtersOpen: false })} />
           </div>
           {/* drag the edge to make the panel wider or narrower */}
-          <div
+          <div tabIndex={0}
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize filters"
