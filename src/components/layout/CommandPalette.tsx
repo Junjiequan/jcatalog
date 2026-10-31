@@ -122,7 +122,7 @@ export function CommandPalette() {
                   run(items[idx]);
                 }
               }}
-              placeholder="Jump to something you opened, a page or an action…"
+              placeholder="Where to? Try a page, something you opened, or “dark mode”"
               className="h-14 flex-1 bg-transparent text-[15px] outline-hidden placeholder:text-subtle"
             />
             <Kbd>Esc</Kbd>
@@ -159,7 +159,7 @@ export function CommandPalette() {
                 </div>
               );
             })}
-            {!items.length && <div className="px-4 py-10 text-center text-sm text-muted">Nothing matches “{q}”.</div>}
+            {!items.length && <div className="px-4 py-10 text-center text-sm text-muted">Nothing by that name. Try fewer letters.</div>}
           </div>
           <div className="flex items-center gap-4 border-t border-line bg-surface-2/60 px-4 py-2 text-xs text-muted">
             <span className="flex items-center gap-1.5"><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>

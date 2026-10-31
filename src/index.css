@@ -26,6 +26,8 @@
 
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* a touch of character for the odd friendly line, from the fonts every Mac and phone already has */
+  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
 
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
@@ -38,6 +40,7 @@
   --animate-slide-up: slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-bar: bar 1.1s ease-in-out infinite;
   --animate-zap: zap 450ms ease-out;
+  --animate-flow: flow 5s linear infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -58,6 +61,11 @@
   @keyframes slide-up {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: none; }
+  }
+  /* colours drifting along a word, forever: the gradient starts and ends on the same colour, so one full pan loops without a seam */
+  @keyframes flow {
+    from { background-position: 0% 0; }
+    to { background-position: 200% 0; }
   }
   /* the lightning mark jolts once when pointed at */
   @keyframes zap {

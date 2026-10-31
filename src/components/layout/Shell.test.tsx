@@ -74,7 +74,7 @@ describe("quick access", () => {
     const { user } = await renderApp("/datasets");
     await screen.findByRole("heading", { name: "Datasets" });
     await user.keyboard("{Control>}k{/Control}");
-    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
+    const box = await screen.findByPlaceholderText(/Where to\?/);
     expect(box).toHaveFocus();
     expect(screen.getByText("Go to")).toBeInTheDocument();
   });
@@ -84,7 +84,7 @@ describe("quick access", () => {
     useUI.getState().pushRecent({ kind: "proposal", pid: "20240311", name: "A proposal" });
     const { user } = await renderApp("/datasets");
     await user.click(await screen.findByRole("button", { name: "Quick access" }));
-    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
+    const box = await screen.findByPlaceholderText(/Where to\?/);
     await user.type(box, "lysoz");
     const dialog = screen.getByRole("dialog");
     // the typed letters are picked out in the label, which splits its text
@@ -96,7 +96,7 @@ describe("quick access", () => {
   it("a typed word is taken to the list of the section the user is in, already searched", async () => {
     const { user } = await renderApp("/proposals");
     await user.click(await screen.findByRole("button", { name: "Quick access" }));
-    const box = await screen.findByPlaceholderText(/Jump to something you opened/);
+    const box = await screen.findByPlaceholderText(/Where to\?/);
     await user.type(box, "zzqq");
     await user.click(await screen.findByText(/ in proposals$/, { selector: "span" }).then((e) => e.closest("button")!));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/proposals?q=zzqq"));

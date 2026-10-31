@@ -146,16 +146,22 @@ function Topbar() {
   return (
     <header className="z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-canvas px-3 sm:gap-3 sm:px-5">
       <Link to="/datasets" className="lg:hidden"><Logo className="h-8 w-8" /></Link>
-      {/* a pill, so it reads as something to press: the lightning mark, what it opens, and its shortcut on wider screens */}
-      <Tip label="Quick access" kbd={`${MOD}K`}>
+      {/* a pill that is alive: one colour drift runs through its rim, its mark and its words together, forever; pointing at it only makes the bolt jump */}
+      <Tip label="Quick Access" kbd={`${MOD}K`}>
         <button
           aria-label="Quick access"
           onClick={() => set({ paletteOpen: true })}
-          className="group inline-flex h-10 items-center gap-2.5 rounded-full border border-line bg-surface p-1 pr-1 shadow-card transition-all hover:border-accent/60 hover:shadow-pop focus-visible:outline-2 focus-visible:outline-accent sm:pr-2.5"
+          className="group animate-flow rounded-full bg-linear-to-r from-accent via-violet-500/50 to-accent bg-[length:200%_100%] p-px shadow-card transition-shadow hover:shadow-pop focus-visible:outline-2 focus-visible:outline-accent motion-reduce:animate-none"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[0_2px_8px_-2px_rgb(var(--accent)/0.6)] transition-transform group-hover:scale-105"><Zap className="h-4 w-4 group-hover:animate-zap motion-reduce:animate-none" strokeWidth={2.4} /></span>
-          {wide && <span className="text-sm text-muted transition-colors group-hover:text-fg">Quick access</span>}
-          {wide && <Kbd>{MOD}K</Kbd>}
+          <span className="flex h-8 items-center gap-2 rounded-full bg-surface p-1 pr-1 sm:pr-2">
+            <span className="animate-flow flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-accent via-violet-500 to-accent bg-[length:200%_100%] text-accent-fg shadow-[0_2px_8px_-2px_rgb(var(--accent)/0.6)] motion-reduce:animate-none"><Zap className="h-3.5 w-3.5 group-hover:animate-zap motion-reduce:animate-none" strokeWidth={2.4} /></span>
+            {wide && (
+              <span className="animate-flow bg-linear-to-r from-accent via-violet-500/50 to-accent bg-[length:200%_100%] bg-clip-text text-[13px] tracking-tight text-transparent motion-reduce:animate-none">
+                <span className="font-extrabold">Quick</span> <span className="font-light">Access</span>
+              </span>
+            )}
+            {wide && <Kbd>{MOD}K</Kbd>}
+          </span>
         </button>
       </Tip>
       <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
